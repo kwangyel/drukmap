@@ -3,11 +3,7 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { LoginComponent } from './login/login.component';
-// import { RegisterComponent } from './register/register.component';
 import { ErrorComponent } from './error/error.component';
-import { SelectZoneComponent } from './select-zone/select-zone.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
 import {
   MatButtonModule,
   MatFormFieldModule,
@@ -35,11 +31,7 @@ import { UpdateHouseholdComponent } from './update-household/update-household.co
 @NgModule({
   declarations: [
     AppComponent,
-    LoginComponent,
-    // RegisterComponent,
     ErrorComponent,
-    SelectZoneComponent,
-    DashboardComponent,
     ChangePasswordComponent,
     MapComponent,
     ModalComponent,
