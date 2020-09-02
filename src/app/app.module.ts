@@ -22,21 +22,15 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { HttpInterceptorService } from './service/http-interceptor.service';
 import { LayoutModule } from '@angular/cdk/layout';
 import { MatListModule } from '@angular/material/list';
-import { ChangePasswordComponent } from './change-password/change-password.component';
 import { MapComponent } from './map/map.component';
 import { ModalComponent } from './modal/modal.component';
-import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
-import { UpdateHouseholdComponent } from './update-household/update-household.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     ErrorComponent,
-    ChangePasswordComponent,
     MapComponent,
     ModalComponent,
-    ConfirmDialogComponent,
-    UpdateHouseholdComponent,
   ],
   imports: [
     BrowserModule,
@@ -65,6 +59,6 @@ import { UpdateHouseholdComponent } from './update-household/update-household.co
   ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  entryComponents: [ModalComponent, ConfirmDialogComponent]
+  entryComponents: [ModalComponent ]
 })
 export class AppModule { }

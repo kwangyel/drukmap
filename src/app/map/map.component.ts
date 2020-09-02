@@ -1,11 +1,13 @@
-import { Component, OnInit, NgZone } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { DataService } from '../service/data.service';
-import { MatSnackBar, MatDialog } from '@angular/material';
+import { MatSnackBar, MatDrawer} from '@angular/material';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { map } from 'rxjs/operators';
+import { FormGroup, FormControl } from '@angular/forms';
+import { SearchService } from '../service/search.service';
 
 export class Building {
   lat: number;
@@ -19,19 +21,17 @@ export class Building {
   styleUrls: ['./map.component.scss']
 })
 export class MapComponent implements OnInit {
-
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  json: any;
-  buildingId: number;
-  isAddAllowed = false;
+  addresses=[];
+  geojson: any;
   building: Building;
-  watchId;
+  locateId:any;
   myPosition:L.Marker;
   myCircle:L.Circle;
-
+  latlng: any;
+  isLocationOn:boolean;
   map: L.Map;
+  search: L.Control;
+  @ViewChild('drawer',{static: false}) drawer: MatDrawer;
 
   greenMarker = L.icon({
     iconUrl: 'assets/marker-green.png',
@@ -44,27 +44,62 @@ export class MapComponent implements OnInit {
   });
 
   myMarker = L.icon({
-    iconUrl: 'assets/marker-icon.png',
+    iconUrl: 'assets/mymarker.png',
     iconSize: [20, 20]
   });
 
   constructor(
     private http: HttpClient,
-    private router: Router,
-    private dataService: DataService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog,
-    private zone: NgZone
+    private searchService : SearchService,
   ) {
     this.building = new Building();
   }
 
+
+  public form : FormGroup = new FormGroup({
+    address: new FormControl(''),
+  });
   ngOnInit() {
     this.renderMap();
   }
+  convertPascal(ss:String){
+    return ss.replace(
+      /\w\S*/g,
+      function(txt) {
+          return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+      }
+    ); 
+  }
+  searchLocation(){
+    let address = this.form.get('address').value;
+    if(address !== ""){
+      console.log(address);
+      let obj=this.searchService.searchAddress(address).subscribe(response=>{
+        if(response.success === "true"){
+          this.addresses= response.data;
+          this.drawer.toggle();
+        }else if (response.success === "false"){
+          this.snackBar.open(response.message,"",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+        }
+      },error=>{
+        console.log(error);
+      });
+    }
+  }
 
   getMyLocation(){
-    this.map.locate({setView:true, maxZoom:15,watch:true});
+    this.isLocationOn = true;
+    if(this.locateId !== undefined){
+      this.map.setView(this.latlng.latlng,17);
+    }
+    this.locateId = this.map.locate({watch:true});
+  }
+  zoomToLocation(){
+    alert("you double clicked");
   }
 
 
@@ -108,19 +143,59 @@ export class MapComponent implements OnInit {
       transparent: true
     }).addTo(this.map);
 
+    // let Search = L.Control.extend({
+    //   onAdd : function(map){
+    //     return L.DomUtil.get("customsearch")
+    //   },
+    // });
+
+    // this.search = new Search({position: 'topleft'}).addTo(this.map);
+    this.map.zoomControl.setPosition("topright");
+
     var baseMaps = {
       "Satellite Image": sat,
       "OSM base map": osm, 
       "Drukmap Base": drukmap
     };
+
+    // this.http.get(`http://localhost:4200/assets/geojson/conv_T239.geojson`).subscribe((json: any) => {
+    //   console.log(json);
+    //   this.geojson= L.geoJSON(json, {
+    //     style: (feature)=>{
+    //       return {
+    //         color:"red",
+    //         fillOpacity:0
+    //       }
+    //     }
+    //   }).addTo(this.map);
+    //   this.map.fitBounds(this.geojson.getBounds());
+    // });
+
     var overlayMaps = {
       "Buildings": bldgTile,
-      "Streets": streeTile
+      "Streets": streeTile,
     }
+
+    
+    this.http.get(`https://outpassdashboard.desuung.org.bt/api/buildings?sub_zone_id=123`).subscribe((json: any) => {
+      console.log(json);
+      const geoJson = L.geoJSON(json, {
+        onEachFeature: (feature, layer) => {
+            layer.on('click', (e) => {
+              alert("this is the building id " +feature.properties.id)
+            });
+          }, pointToLayer: (feature, latLng) => {
+            if (feature.properties.status === 'INCOMPLETE') {
+              return L.marker(latLng, {icon: this.redMarker});
+            } else {
+              return L.marker(latLng, {icon: this.greenMarker});
+            }
+          }
+        }).addTo(this.map);
+    });
     
 
     L.control.layers(baseMaps,overlayMaps).addTo(this.map);
-    this.onMapReady(this.map);
 
     this.map.on('locationerror',(err)=>{
           if (err.code === 0) {
@@ -151,9 +226,17 @@ export class MapComponent implements OnInit {
 
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
-      L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map).bindPopup("You are here").openPopup();
+      this.latlng = e
+      if(this.myPosition !== undefined){
+        this.map.removeLayer(this.myPosition);
+      }
+      this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
+
+      if(this.myCircle!== undefined){
+        this.map.removeLayer(this.myCircle);
+      }
       if(radius<100){
-        L.circle(e.latlng,radius).addTo(this.map);
+        this.myCircle = L.circle(e.latlng,radius).addTo(this.map);
       }
     });
   }

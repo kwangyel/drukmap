@@ -1,19 +1,38 @@
-<mat-toolbar>
+<div>
+  <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
+      <mat-drawer #drawer [mode]="over" class="drawer-content">
+        <div class = "search-result">
+          <mat-card *ngFor = "let address of addresses" class="result-card">
+              {{address.address}}
+          </mat-card>
+        </div>
 
-</mat-toolbar>
-<div class="map-container">
-    <div id="map">
-      <div class="leaflet-bottom leaflet-right">
-          <button style="
-          width: 52px;
-          border-radius: 23px;
-          height: 52px;
-          background: #ffffffa3;
-          margin-bottom: 20px;
-          border: none;" value="Cancel" class=" span3 leaflet-control" (click)="getMyLocation()">
-            <mat-icon style="color: blue;">location_searching</mat-icon>
-          </button>
-      </div>
-    </div>
+      </mat-drawer>
+      <mat-drawer-content >
+        <div class="map-container">
+            <div id="map">
+              <div class="leaflet-bottom leaflet-right">
+                  <button style="
+                  width: 52px;
+                  border-radius: 23px;
+                  height: 52px;
+                  background: #ffffffa3;
+                  margin-bottom: 20px;
+                  border: none;" value="Cancel" class=" span3 leaflet-control"  (click)="getMyLocation()" (dblclick)="zoomToLocation()">
+                    <mat-icon style="color: blue;">location_searching</mat-icon>
+                  </button>
+              </div>
+            </div>
+        </div>
+      </mat-drawer-content>
+  </mat-drawer-container>
+
+  <div id="customsearch" class="search-div">
+      <form [formGroup]="form" class="search-box">
+        <mat-form-field class="search-input" appearance="fill" >
+          <input  matInput placeholder="Search a place" formControlName="address" required>
+          <mat-icon matSuffix (click)="searchLocation();">search</mat-icon>
+        </mat-form-field>
+      </form>
+  </div>
 </div>
-
