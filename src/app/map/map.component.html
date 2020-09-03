@@ -2,8 +2,10 @@
   <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
       <mat-drawer #drawer [mode]="over" class="drawer-content">
         <div class = "search-result">
-          <mat-card *ngFor = "let address of addresses" class="result-card">
+          <mat-card *ngFor = "let address of addresses"  class="result-card">
+            <a (click)="gotoplace(address.geom.coordinates)">
               {{address.address}}
+            </a>
           </mat-card>
         </div>
 

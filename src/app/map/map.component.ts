@@ -31,6 +31,7 @@ export class MapComponent implements OnInit {
   isLocationOn:boolean;
   map: L.Map;
   search: L.Control;
+  gotoPlaceMarker: L.Marker;
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
 
   greenMarker = L.icon({
@@ -70,6 +71,15 @@ export class MapComponent implements OnInit {
           return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
       }
     ); 
+  }
+  gotoplace(coord){
+    let lng = coord[0][0];
+    let lat = coord[0][1];
+    if(this.gotoPlaceMarker !== undefined){
+      this.map.removeLayer(this.gotoPlaceMarker);
+    }
+    this.gotoPlaceMarker=L.marker([lat,lng],{icon: this.myMarker}).addTo(this.map);
+    this.map.setView([lat,lng],16);
   }
   searchLocation(){
     let address = this.form.get('address').value;
