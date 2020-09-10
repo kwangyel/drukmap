@@ -32,6 +32,7 @@ export class MapComponent implements OnInit {
   map: L.Map;
   search: L.Control;
   gotoPlaceMarker: L.Marker;
+
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
 
   greenMarker = L.icon({
@@ -61,9 +62,13 @@ export class MapComponent implements OnInit {
   public form : FormGroup = new FormGroup({
     address: new FormControl(''),
   });
+
   ngOnInit() {
     this.renderMap();
   }
+
+
+  //convert all to pascal case. Not needed as of now since fuzzy string is taking care of the matching
   convertPascal(ss:String){
     return ss.replace(
       /\w\S*/g,
@@ -72,6 +77,8 @@ export class MapComponent implements OnInit {
       }
     ); 
   }
+
+  //goes to xy coordinate on the map and marks with marker and zoom to that place
   gotoplace(coord){
     let lng = coord[0][0];
     let lat = coord[0][1];
@@ -81,6 +88,8 @@ export class MapComponent implements OnInit {
     this.gotoPlaceMarker=L.marker([lat,lng],{icon: this.myMarker}).addTo(this.map);
     this.map.setView([lat,lng],16);
   }
+
+  //search the given address in the DB. Might need to move the state to the store if possible.
   searchLocation(){
     let address = this.form.get('address').value;
     if(address !== ""){
@@ -101,6 +110,7 @@ export class MapComponent implements OnInit {
     }
   }
 
+  //Zooms to the current location based on data from the device. TODO: need to fix this.
   getMyLocation(){
     this.isLocationOn = true;
     if(this.locateId !== undefined){
@@ -251,8 +261,4 @@ export class MapComponent implements OnInit {
     });
   }
 
-  onMapReady(map: L.Map) {
-    const zoneId = Number(sessionStorage.getItem('subZoneId'));
-  }
-  
 }
