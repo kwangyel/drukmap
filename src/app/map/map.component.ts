@@ -4,7 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { DataService } from '../service/data.service';
 import { MatSnackBar, MatDrawer} from '@angular/material';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { map } from 'rxjs/operators';
 import { FormGroup, FormControl } from '@angular/forms';
 import { SearchService } from '../service/search.service';

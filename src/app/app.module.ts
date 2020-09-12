@@ -3,7 +3,6 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { ErrorComponent } from './error/error.component';
 import {
   MatButtonModule,
   MatFormFieldModule,
@@ -23,14 +22,11 @@ import { HttpInterceptorService } from './service/http-interceptor.service';
 import { LayoutModule } from '@angular/cdk/layout';
 import { MatListModule } from '@angular/material/list';
 import { MapComponent } from './map/map.component';
-import { ModalComponent } from './modal/modal.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    ErrorComponent,
     MapComponent,
-    ModalComponent,
   ],
   imports: [
     BrowserModule,
@@ -59,6 +55,5 @@ import { ModalComponent } from './modal/modal.component';
   ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  entryComponents: [ModalComponent ]
 })
 export class AppModule { }
