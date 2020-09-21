@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { API_URL } from '../app.constants';
+import { point } from 'leaflet';
 
 @Injectable({
   providedIn: 'root'
@@ -53,6 +54,14 @@ export class DataService {
   getDzongkhags() {
     return this.http
       .get<any>(`${API_URL}/dzongkhags`, this.httpOptions)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  getDirection(pointpairs){
+    return this.http
+      .post<any>(`${API_URL}/getpath`,pointpairs,this.httpOptions)
       .pipe(
         catchError(this.handleError)
       );

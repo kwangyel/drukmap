@@ -1,11 +1,11 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
 import { DataService } from '../service/data.service';
-import { MatSnackBar, MatDrawer} from '@angular/material';
+import { MatDrawer} from '@angular/material/sidenav';
+import { MatSnackBar} from '@angular/material/snack-bar';
 import { map } from 'rxjs/operators';
-import { FormGroup, FormControl } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 
 export class Building {
@@ -21,6 +21,8 @@ export class Building {
 })
 export class MapComponent implements OnInit {
   addresses=[];
+  frompoints = [];
+  topoints = [];
   geojson: any;
   building: Building;
   locateId:any;
@@ -31,6 +33,12 @@ export class MapComponent implements OnInit {
   map: L.Map;
   search: L.Control;
   gotoPlaceMarker: L.Marker;
+  geojsonpath: any;
+  showsearchbox=true;
+  showdirbox = false;
+  searchform: FormGroup;
+  dirform: FormGroup;
+
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
 
@@ -53,19 +61,28 @@ export class MapComponent implements OnInit {
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private searchService : SearchService,
+    private dataservice: DataService,
+    private fb : FormBuilder,
   ) {
     this.building = new Building();
   }
 
 
-  public form : FormGroup = new FormGroup({
-    address: new FormControl(''),
-  });
 
   ngOnInit() {
     this.renderMap();
+    this.reactiveForm();
   }
 
+  reactiveForm(){
+    this.searchform = this.fb.group({
+      address:[]
+    })
+    this.dirform = this.fb.group({
+      frompoint:[],
+      topoint:[]
+    })
+  }
 
   //convert all to pascal case. Not needed as of now since fuzzy string is taking care of the matching
   convertPascal(ss:String){
@@ -88,9 +105,106 @@ export class MapComponent implements OnInit {
     this.map.setView([lat,lng],16);
   }
 
+  getDirection(){
+    if(this.showdirbox === false){
+      this.showsearchbox = false;
+      this.showdirbox = true;
+    }else{
+      this.showsearchbox = true;
+      this.showdirbox = false;
+    }
+  }
+  getPath(){
+    let topoint = this.dirform.get('topoint').value;
+    let frompoint= this.dirform.get('frompoint').value;
+    let acoord=null;
+    let bcoord = null;
+    
+    acoord=this.searchService.searchAddress(topoint).subscribe(response=>{
+        if(response.success === "true"){
+          return response.data[0].geom.coordinates;
+        }else if (response.success === "false"){
+          this.snackBar.open(response.message,"",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+        }
+    });
+
+    this.searchService.searchAddress(frompoint).subscribe(response=>{
+        if(response.success === "true"){
+          bcoord= response.data[0].geom.coordinates;
+        }else if (response.success === "false"){
+          this.snackBar.open(response.message,"",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+        }
+    });
+    console.log(bcoord);
+    if(!acoord && !bcoord){
+      console.log(acoord[0])
+
+      // let data={
+      //   "pointa":{
+      //       "lat":alng,
+      //       "lng":alat
+      //   },
+      //   "pointb":{
+      //       "lat":bcoord[0],
+      //       "lng":bcoord[1]
+      //   }
+      // }
+      // this.dataservice.getDirection(data).subscribe(response=>{
+      //   console.log(response);
+      // })
+    }
+
+  }
+  onFromChange($event){
+    let frompoint = this.dirform.get('frompoint').value;
+    this.searchService.searchAddress(frompoint).subscribe(response=>{
+        if(response.success === "true"){
+          this.frompoints= response.data;
+          this.drawer.open();
+        }else if (response.success === "false"){
+          this.snackBar.open(response.message,"",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+        }
+    });
+  }
+  changefrompoint(address){
+    this.dirform.patchValue({
+      frompoint:address
+    });
+    this.frompoints = [];
+  }
+  changetopoint(address){
+    this.dirform.patchValue({
+      topoint:address
+    });
+    this.topoints = [];
+  }
+
+  onToChange($event){
+    let toPoint= this.dirform.get('topoint').value;
+    this.searchService.searchAddress(toPoint).subscribe(response=>{
+        if(response.success === "true"){
+          this.topoints= response.data;
+          this.drawer.open();
+        }else if (response.success === "false"){
+          this.snackBar.open(response.message,"",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+        }
+    });
+  }
   //search the given address in the DB. Might need to move the state to the store if possible.
   searchLocation(){
-    let address = this.form.get('address').value;
+    let address = this.searchform.get('address').value;
     if(address !== ""){
       console.log(address);
       let obj=this.searchService.searchAddress(address).subscribe(response=>{
@@ -195,23 +309,13 @@ export class MapComponent implements OnInit {
       "Streets": streeTile,
     }
 
-    
-    this.http.get(`https://outpassdashboard.desuung.org.bt/api/buildings?sub_zone_id=123`).subscribe((json: any) => {
-      console.log(json);
-      const geoJson = L.geoJSON(json, {
-        onEachFeature: (feature, layer) => {
-            layer.on('click', (e) => {
-              alert("this is the building id " +feature.properties.id)
-            });
-          }, pointToLayer: (feature, latLng) => {
-            if (feature.properties.status === 'INCOMPLETE') {
-              return L.marker(latLng, {icon: this.redMarker});
-            } else {
-              return L.marker(latLng, {icon: this.greenMarker});
-            }
-          }
-        }).addTo(this.map);
-    });
+
+    let postbody = {
+      "a":[123,12],
+      "b":[1,1]
+    }
+  
+
     
 
     L.control.layers(baseMaps,overlayMaps).addTo(this.map);
