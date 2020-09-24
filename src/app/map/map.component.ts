@@ -4,7 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { DataService } from '../service/data.service';
 import { MatDrawer} from '@angular/material/sidenav';
 import { MatSnackBar} from '@angular/material/snack-bar';
-import { map } from 'rxjs/operators';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 
@@ -38,6 +37,8 @@ export class MapComponent implements OnInit {
   showdirbox = false;
   searchform: FormGroup;
   dirform: FormGroup;
+  startMarker: L.Marker;
+  endMarker: L.Marker;
 
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
@@ -56,6 +57,11 @@ export class MapComponent implements OnInit {
     iconUrl: 'assets/mymarker.png',
     iconSize: [20, 20]
   });
+
+  pinMarker = L.icon({
+    iconUrl: 'assets/marker-icon.png',
+    iconSize: [20,30]
+  })
 
   constructor(
     private http: HttpClient,
@@ -117,23 +123,39 @@ export class MapComponent implements OnInit {
   getPath(){
     let topoint = this.dirform.get('topoint').value;
     let frompoint= this.dirform.get('frompoint').value;
-    let acoord=null;
-    let bcoord = null;
+    let acoord=[];
+    let bcoord = [];
     
-    acoord=this.searchService.searchAddress(topoint).subscribe(response=>{
-        if(response.success === "true"){
-          return response.data[0].geom.coordinates;
-        }else if (response.success === "false"){
-          this.snackBar.open(response.message,"",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-        }
-    });
-
     this.searchService.searchAddress(frompoint).subscribe(response=>{
         if(response.success === "true"){
-          bcoord= response.data[0].geom.coordinates;
+          acoord= response.data[0].geom.coordinates;
+          this.searchService.searchAddress(topoint).subscribe(response=>{
+              if(response.success === "true"){
+                bcoord= response.data[0].geom.coordinates;
+                let dataobj = {
+                  "pointa":acoord[0],
+                  "pointb":bcoord[0]
+                }
+                console.log(dataobj)
+                this.dataservice.getDirection(dataobj).subscribe((json:any)=>{
+                  if(this.geojson !== undefined){ this.map.removeLayer(this.geojsonpath) }
+                  this.geojsonpath = L.geoJSON(json.data).addTo(this.map);
+                  this.map.fitBounds(this.geojsonpath.getBounds());
+
+                  if(this.startMarker !== undefined){ this.map.removeLayer(this.startMarker) }
+                  this.startMarker = L.marker(acoord[0].reverse(),{icon:this.pinMarker}).addTo(this.map);
+
+                  if(this.endMarker !== undefined){ this.map.removeLayer(this.endMarker) }
+                  this.endMarker = L.marker(bcoord[0].reverse(),{icon:this.myMarker}).addTo(this.map);
+
+                });
+              }else if (response.success === "false"){
+                this.snackBar.open(response.message,"",{
+                  verticalPosition: 'top',
+                  duration: 3000
+                });
+              }
+          });
         }else if (response.success === "false"){
           this.snackBar.open(response.message,"",{
             verticalPosition: 'top',
@@ -141,24 +163,6 @@ export class MapComponent implements OnInit {
           });
         }
     });
-    console.log(bcoord);
-    if(!acoord && !bcoord){
-      console.log(acoord[0])
-
-      // let data={
-      //   "pointa":{
-      //       "lat":alng,
-      //       "lng":alat
-      //   },
-      //   "pointb":{
-      //       "lat":bcoord[0],
-      //       "lng":bcoord[1]
-      //   }
-      // }
-      // this.dataservice.getDirection(data).subscribe(response=>{
-      //   console.log(response);
-      // })
-    }
 
   }
   onFromChange($event){
