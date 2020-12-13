@@ -23,7 +23,7 @@
       </mat-drawer>
       <mat-drawer-content >
         <div class="map-container">
-            <div id="map">
+            <div id="map" [style.display]="show2d ? 'block' : 'none'">
               <div class="leaflet-bottom leaflet-right">
                   <button style="
                   width: 52px;
@@ -48,6 +48,8 @@
                   </button>
               </div>
             </div>
+
+            <div id="osmb" [style.display]="show3d ? 'block' : 'none'"></div>
         </div>
       </mat-drawer-content>
   </mat-drawer-container>
@@ -76,5 +78,7 @@
         </mat-form-field>
       </form>
   </div>
-
+  <div class = "toggle-div">
+    <label class="switch"><input type="checkbox" (change)="toggle3d($event)" id="togBtn"><div class="slider round"><!--ADDED HTML --><span class="on">3D</span><span class="off">2D</span><!--END--></div></label>
+  </div>
 </div>

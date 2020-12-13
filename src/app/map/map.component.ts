@@ -6,6 +6,7 @@ import { MatDrawer} from '@angular/material/sidenav';
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
+declare let OSMBuildings:any;
 
 export class Building {
   lat: number;
@@ -19,6 +20,8 @@ export class Building {
   styleUrls: ['./map.component.scss']
 })
 export class MapComponent implements OnInit {
+  show3d = false;
+  show2d = true;
   addresses=[];
   frompoints = [];
   topoints = [];
@@ -39,6 +42,7 @@ export class MapComponent implements OnInit {
   dirform: FormGroup;
   startMarker: L.Marker;
   endMarker: L.Marker;
+  sat: any;
 
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
@@ -76,6 +80,10 @@ export class MapComponent implements OnInit {
 
 
   ngOnInit() {
+    this.sat = L.tileLayer('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      minZoom: 13,
+    });
     this.renderMap();
     this.reactiveForm();
   }
@@ -239,12 +247,67 @@ export class MapComponent implements OnInit {
     alert("you double clicked");
   }
 
+  initOSMB(){
+    var osmbuildings = new OSMBuildings({ container: 'osmb', position: { latitude: 27.4712, longitude: 89.64191}, zoom: 18, minZoom: 10, tilt:40,
+    rotation: 300,
+    effects: ['shadows'],
+    maxZoom: 20 });
+
+
+    // osmbuildings.addMapTiles('http://{s}.tile.osm.org/{z}/{x}/{y}.png');
+    osmbuildings.addMapTiles('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}');
+
+    osmbuildings.addGeoJSONTiles('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+
+    osmbuildings.on('loadfeature', function(feature) {
+      console.log("feature:",feature);
+      var height= parseInt(feature.detail.properties.height);
+      var color=null;
+      if(height<1){
+        color="red";
+      }
+      else{
+        color="green";
+      }
+      feature.detail.properties.color=color;
+
+      return feature;
+    })
+
+    osmbuildings.on('pointerup', e => {
+      if (!e.features) {
+        osmbuildings.highlight(feature => {});
+        return;
+      }
+
+      const featureIdList = e.features.map(feature => feature.id);
+      osmbuildings.highlight(feature => {
+        if (featureIdList.indexOf(feature.id) > -1) {
+          return '#0ffc03';
+        }
+      });
+    });
+  }
+
+  initLeaflet(){
+    this.map = L.map('map',{
+      center:[27.4712,89.64191],
+      zoom: 13,
+      maxZoom: 20,
+      layers: [this.sat]
+    });
+  }
+  toggle3d($event){
+    if($event.target.checked == true){
+      this.show2d = false
+      this.show3d = true
+    }else{
+      this.show3d = false
+      this.show2d = true
+    }
+  }
 
   renderMap() {
-    var sat = L.tileLayer('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
-      minZoom: 13,
-    });
     var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
       maxZoom: 20,
       minZoom: 13,
@@ -257,12 +320,15 @@ export class MapComponent implements OnInit {
       transparent: true
     });
 
-    this.map = L.map('map',{
-      center:[27.4712,89.64191],
-      zoom: 13,
-      maxZoom: 20,
-      layers: [sat]
-    });
+    this.initLeaflet();
+    this.initOSMB();
+
+    // this.map = L.map('map',{
+    //   center:[27.4712,89.64191],
+    //   zoom: 13,
+    //   maxZoom: 20,
+    //   layers: [sat]
+    // });
 
     var streeTile = L.tileLayer.wms('http://{s}.myhome.bt:8080/geoserver/bhutan/wms', {
       layers: 'bhutan:street_11august',
@@ -290,7 +356,7 @@ export class MapComponent implements OnInit {
     this.map.zoomControl.setPosition("topright");
 
     var baseMaps = {
-      "Satellite Image": sat,
+      "Satellite Image": this.sat,
       "OSM base map": osm, 
       "Drukmap Base": drukmap
     };
