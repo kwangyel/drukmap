@@ -8,6 +8,8 @@ import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
+import * as turf from '@turf/turf';
+import { lineString } from '@turf/turf';
 
 declare let OSMBuildings:any;
 
@@ -328,21 +330,75 @@ export class MapComponent implements OnInit {
 
 
     //Leaflet routing machine
-    L.Routing.control({
+    var routing = L.Routing.control({
       router: new L.Routing.GraphHopper(undefined , {
         serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
       }),
-      // router: L.Routing['GraphHopper']('', {
-      //   serviceUrl: 'http://blablabla/route',
-      //   allowUTurns: false
-      // },),
       showAlternatives: true,
-      routeWhileDragging: true,
-      waypoints: [
-          L.latLng(27.476714, 89.637408),
-          L.latLng(27.430412, 89.647060)
-      ]
+      // routeWhileDragging: true,
+      addWaypoints: false,
+      
+      plan: L.Routing.plan(
+        //set origin destination here
+        [ L.latLng(27.476714, 89.637408), L.latLng(27.430412, 89.647060) ],
+        {
+          createMarker: function (i: number, waypoint: any, n: number) {
+            var marker;
+            console.log(i)
+            if(i == 0){
+              marker = L.marker(waypoint.latLng, {
+                icon: L.icon({
+                  iconUrl: 'assets/marker-red.png',
+                  iconSize: [15, 15]
+                })
+              });
+            }else{
+              marker = L.marker(waypoint.latLng) 
+            }
+            return marker;
+          }
+        }
+      )
+
     }).addTo(this.map);
+
+
+    //The routing object
+    // initialize the routng and navigation interface from here
+    var currentRoute = null;
+    var stPT
+    var snPT
+
+    routing.on('routesfound',(e)=>{
+      currentRoute = e.routes[0];
+    })
+    this.map.on('click',<LeafletMouseEvent>(e)=>{
+      if(currentRoute !== null){
+        let coordinates = currentRoute.coordinates.map(x => [x.lat,x.lng]);
+        let ls = turf.lineString(coordinates);
+
+        //test point
+        var pt = turf.point([e.latlng.lat,e.latlng.lng]);
+        if(stPT !== undefined){
+          stPT.setLatLng(new L.LatLng(e.latlng.lat,e.latlng.lng));
+          // stPT = null;
+        }else{
+          stPT = L.marker([e.latlng.lat,e.latlng.lng],{icon: this.redMarker}).addTo(this.map);
+        }
+
+        //snaped point on line
+        var snapped = turf.nearestPointOnLine(ls,pt,{units:'meters'});
+        if(snapped.properties.dist * 100 < 30){
+          if(snPT !== undefined ){
+            snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]));
+          }else{
+            snPT = L.marker([snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]]).addTo(this.map);
+          }
+        }
+        console.log(snapped)
+      }
+    })
+
 
 
     // this.map = L.map('map',{
