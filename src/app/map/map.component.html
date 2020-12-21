@@ -1,5 +1,7 @@
 <div>
   <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
+
+
       <mat-drawer #drawer  class="drawer-content">
         <div class = "search-result">
           <mat-card *ngFor = "let address of addresses"  class="result-card">
@@ -56,11 +58,15 @@
 
   <div id="customsearch" class="search-div" *ngIf="showsearchbox">
       <form [formGroup]="searchform" class="search-box">
-        <mat-form-field class="search-input" appearance="fill" >
+        <!-- <mat-form-field class="search-input" appearance="fill"  style="padding: 0px 10px 0px 10px; height: 40px;">
           <input  matInput placeholder="Search a place" formControlName="address" required>
           <mat-icon matSuffix (click)="searchLocation();">search</mat-icon>
-        </mat-form-field>
+        </mat-form-field> -->
+        <span style = "padding: 10px;"><i class="fa fa-bars" style = "text-align: center;"></i></span>
+        <input placeholder="Search a place" style="width: 100%;padding-left: 10px; outline:none;border: none; border-color: transparent;">
       </form>
+
+
   </div>
 
   <div id="customsearch" class="search-div" *ngIf="showdirbox">

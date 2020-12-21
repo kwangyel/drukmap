@@ -1,0 +1,92 @@
+.app-splash-screen {
+    background: #fafafafa;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    // transition: left 0.5s;
+  }
+  .container{
+    animation: blurFadeInOut 3s ease-in backwards;
+  }
+  
+  .app-label {
+    margin-top: 32px;
+    color: #fff;
+    font-size: 2.5em;
+    font-family: "Pacifico", cursive;
+  }
+  
+  .app-splash-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .app-logo {
+    background: url("./../../assets/drukmap.svg");
+    background-repeat: no-repeat;
+    max-width: 100%;
+    background-position: center;
+    background-size: contain;
+    // width: 400px;
+    height: 400px;
+    animation: blurFadeInOut 3s ease-in backwards;
+  }
+
+  @keyframes blurFadeInOut{
+    0%{
+      opacity: 0;
+      text-shadow: 0px 0px 40px #fff;
+      transform: scale(0.9);
+    }
+    20%,75%{
+      opacity: 1;
+      text-shadow: 0px 0px 1px #fff;
+      transform: scale(1);
+    }
+    100%{
+      opacity: 0;
+      text-shadow: 0px 0px 50px #fff;
+      transform: scale(0);
+    }
+  }
+  @keyframes blurFadeIn{
+    0%{
+      opacity: 0;
+      text-shadow: 0px 0px 40px #fff;
+      transform: scale(1.3);
+    }
+    50%{
+      opacity: 0.5;
+      text-shadow: 0px 0px 10px #fff;
+      transform: scale(1.1);
+    }
+    100%{
+      opacity: 1;
+      text-shadow: 0px 0px 1px #fff;
+      transform: scale(1);
+    }
+  }
+  @keyframes fadeInBack{
+    0%{
+      opacity: 0;
+      transform: scale(0);
+    }
+    50%{
+      opacity: 0.4;
+      transform: scale(2);
+    }
+    100%{
+      opacity: 0.2;
+      transform: scale(5);
+    }
+  } 

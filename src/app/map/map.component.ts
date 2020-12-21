@@ -6,6 +6,9 @@ import { MatDrawer} from '@angular/material/sidenav';
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
+import 'leaflet-routing-machine';
+import 'lrm-graphhopper';
+
 declare let OSMBuildings:any;
 
 export class Building {
@@ -322,6 +325,25 @@ export class MapComponent implements OnInit {
 
     this.initLeaflet();
     this.initOSMB();
+
+
+    //Leaflet routing machine
+    L.Routing.control({
+      router: new L.Routing.GraphHopper(undefined , {
+        serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
+      }),
+      // router: L.Routing['GraphHopper']('', {
+      //   serviceUrl: 'http://blablabla/route',
+      //   allowUTurns: false
+      // },),
+      showAlternatives: true,
+      routeWhileDragging: true,
+      waypoints: [
+          L.latLng(27.476714, 89.637408),
+          L.latLng(27.430412, 89.647060)
+      ]
+    }).addTo(this.map);
+
 
     // this.map = L.map('map',{
     //   center:[27.4712,89.64191],
