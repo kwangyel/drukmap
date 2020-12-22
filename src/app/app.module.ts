@@ -5,6 +5,7 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   MatButtonModule,
+  MatAutocompleteModule,
   MatFormFieldModule,
   MatInputModule,
   MatSelectModule,
@@ -37,6 +38,7 @@ import { MapComponent } from './map/map.component';
     MatInputModule,
     MatSelectModule,
     MatToolbarModule,
+    MatAutocompleteModule,
     MatCardModule,
     MatIconModule,
     MatSidenavModule,

@@ -3,9 +3,12 @@ import * as L from 'leaflet';
 import { HttpClient } from '@angular/common/http';
 import { DataService } from '../service/data.service';
 import { MatDrawer} from '@angular/material/sidenav';
+import { MatAutocomplete } from "@angular/material/autocomplete";
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
+import {Observable} from 'rxjs';
+import {map, startWith} from 'rxjs/operators';
 declare let OSMBuildings:any;
 
 export class Building {
@@ -20,13 +23,16 @@ export class Building {
   styleUrls: ['./map.component.scss']
 })
 export class MapComponent implements OnInit {
+  myControl = new FormControl();
+  options= ['One', 'Two', 'Three'];
+  filteredOptions: Observable<string[]>;
   show3d = false;
   show2d = true;
   addresses=[];
   frompoints = [];
   topoints = [];
   geojson: any;
-  building: Building;
+building: Building;
   locateId:any;
   myPosition:L.Marker;
   myCircle:L.Circle;
@@ -86,6 +92,12 @@ export class MapComponent implements OnInit {
     });
     this.renderMap();
     this.reactiveForm();
+
+    this.filteredOptions = this.myControl.valueChanges
+      .pipe(
+        startWith(''),
+        map(value => this._filter(value))
+      );
   }
 
   reactiveForm(){
@@ -119,6 +131,12 @@ export class MapComponent implements OnInit {
     this.map.setView([lat,lng],16);
   }
 
+  private _filter(value: string): string[] {
+    const filterValue = value.toLowerCase();
+
+    return this.options.filter(option => option.toLowerCase().includes(filterValue));
+  }
+
   getDirection(){
     if(this.showdirbox === false){
       this.showsearchbox = false;
@@ -133,6 +151,7 @@ export class MapComponent implements OnInit {
     let frompoint= this.dirform.get('frompoint').value;
     let acoord=[];
     let bcoord = [];
+    
     
     this.searchService.searchAddress(frompoint).subscribe(response=>{
         if(response.success === "true"){
@@ -222,7 +241,6 @@ export class MapComponent implements OnInit {
       let obj=this.searchService.searchAddress(address).subscribe(response=>{
         if(response.success === "true"){
           this.addresses= response.data;
-          this.drawer.toggle();
         }else if (response.success === "false"){
           this.snackBar.open(response.message,"",{
             verticalPosition: 'top',
@@ -233,6 +251,10 @@ export class MapComponent implements OnInit {
         console.log(error);
       });
     }
+  }
+
+  openDrawer(){
+    this.drawer.toggle();
   }
 
   //Zooms to the current location based on data from the device. TODO: need to fix this.

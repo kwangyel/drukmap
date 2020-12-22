@@ -54,13 +54,27 @@
       </mat-drawer-content>
   </mat-drawer-container>
 
-  <div id="customsearch" class="search-div" *ngIf="showsearchbox">
+  <div id="customsearch" class="search-div" *ngIf="showsearchbox" >
+    <button class="drawer" >
+      <mat-icon matSuffix (click)="openDrawer();" >toc</mat-icon>
+    </button>
       <form [formGroup]="searchform" class="search-box">
-        <mat-form-field class="search-input" appearance="fill" >
-          <input  matInput placeholder="Search a place" formControlName="address" required>
-          <mat-icon matSuffix (click)="searchLocation();">search</mat-icon>
+        <mat-form-field class="search-input" appearance="none" >
+          <input  matInput placeholder="Search DrukMap" formControlName="address" required [matAutocomplete]="auto">
+            <mat-autocomplete #auto="matAutocomplete">
+              <mat-option *ngFor="let option of filteredOptions | async" [value]="option">
+                {{option}}
+              </mat-option>
+            </mat-autocomplete>
         </mat-form-field>
       </form>
+      <button class="searchIcon">
+        <mat-icon matSuffix (click)="searchLocation();" style="color: gray;">search</mat-icon>
+      </button>
+      <button class="directionIcon" >
+        <mat-icon matSuffix (click)="openDrawer();" >directions</mat-icon>
+      </button>
+      
   </div>
 
   <div id="customsearch" class="search-div" *ngIf="showdirbox">
