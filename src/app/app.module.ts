@@ -5,6 +5,7 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   MatButtonModule,
+  MatAutocompleteModule,
   MatFormFieldModule,
   MatInputModule,
   MatSelectModule,
@@ -39,6 +40,7 @@ import { SplashScreenComponent } from './splash-screen/splash-screen.component';
     MatInputModule,
     MatSelectModule,
     MatToolbarModule,
+    MatAutocompleteModule,
     MatCardModule,
     MatIconModule,
     MatSidenavModule,
