@@ -44,4 +44,13 @@ export class SearchService {
         catchError(this.handleError)
       );
   }
+
+  // ping graphhopper for the route. This is necesssary sing lrm doesnt provide detailed instructions about the route so a second ping to the service is neessary
+  searchroute(pointa,pointb){
+    return this.http
+      .get<any>('https://zhichar.myddns.rocks/gh/route?point='+pointa.lat +','+ pointa.lng +' &point='+pointb.lat +','+ pointb.lng +'&instructions=true&type=json&key=undefined')
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
 }

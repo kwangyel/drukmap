@@ -7,14 +7,129 @@ import { MatAutocomplete } from "@angular/material/autocomplete";
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
+
 import {Observable} from 'rxjs';
 import {map, startWith} from 'rxjs/operators';
+
+import 'leaflet-routing-machine';
+import 'lrm-graphhopper';
+import * as turf from '@turf/turf';
+import { lineString } from '@turf/turf';
+
 declare let OSMBuildings:any;
 
 export class Building {
   lat: number;
   lng: number;
   sub_zone_id: number;
+}
+
+interface ll {
+  lat: number;
+  lng: number;
+}
+
+export class Route {
+  //Class variables
+  route: any;
+  currentLegIndex: number;
+  legDistanceRemaining: number;
+  currentBearing : number;
+  bearingAfter = null;
+  bearingAfterIndex: number;
+
+  constructor(currentRoute){
+    this.route = currentRoute;
+    this.currentLegIndex = 0;
+    this.initBearing()
+  }
+  
+  // class methods
+
+  //initialize bearing with bearing of starting leg
+  initBearing(){
+    let pointa = turf.point([this.route.coordinates[0].lng,this.route.coordinates[0].lat])
+    let index = this.route.instructions[1].index
+    let pointb = turf.point([this.route.coordinates[index].lng,this.route.coordinates[index].lat])
+    this.currentBearing = turf.bearing(pointa,pointb,{final: true})
+  }
+
+  //increment Index when maneuver is complete
+  incrementIndex(){
+    if(this.route.instructions.length > this.currentLegIndex + 1){
+      this.currentLegIndex++
+      return true
+    }
+    return false
+  }
+  // Get current leg instruction
+  getCurrentLegInstruction(){
+    if(this.route.instructions.length > this.currentLegIndex){
+      return this.route.instructions[this.currentLegIndex]
+    }
+    return null;
+  }
+
+  //get Starting coordinate of next leg
+  getNextStartPosition(){
+    if(this.route.instructions.length > (this.currentLegIndex + 1)){
+      var index = this.route.instructions[this.currentLegIndex + 1].index
+      return this.route.coordinates[index]
+    }
+    return null;
+  }
+
+  //Get next leg instruction
+  getNextLegInstruction(){
+    if(this.route.instructions.length > (this.currentLegIndex + 1)){
+      return this.route.instructions[this.currentLegIndex + 1]
+    }
+    return null;
+  }
+
+  //get end point of current instruction
+  getEndIndexCurrentInstruction(){
+    if(this.route.instructions.length > (this.currentLegIndex + 1)){
+      return this.route.instructions[this.currentLegIndex + 1].index
+    }
+    return null;
+  }
+
+  //get end point of next instruction
+  getEndIndexNextInstruction(){
+    if(this.route.instructions.length > (this.currentLegIndex + 2)){
+      return this.route.instructions[this.currentLegIndex + 2].index
+    }
+    return null;
+  }
+
+  //Get current bearing
+  getCurrentBearing(){
+    var currInst= this.getCurrentLegInstruction()
+    var startIndex = currInst.index
+    var currentIndexEnd = this.getEndIndexCurrentInstruction()
+    if(startIndex !== null && currentIndexEnd !== null){
+      var pointa = turf.point([this.route.coordinates[startIndex].lng,this.route.coordinates[startIndex].lat])
+      var pointb = turf.point([this.route.coordinates[currentIndexEnd].lng,this.route.coordinates[currentIndexEnd].lat])
+      this.bearingAfter = turf.bearing(pointa,pointb,{final: true})
+      return this.bearingAfter
+    }
+    return null
+    return this.currentBearing
+  }
+
+  //get bearing after maneuver
+  getNextBearing(){
+    var nextIndexEnd = this.getEndIndexNextInstruction()
+    var currentIndexEnd = this.getEndIndexCurrentInstruction()
+    if(nextIndexEnd !== null && currentIndexEnd !== null){
+      var pointa = turf.point([this.route.coordinates[currentIndexEnd].lng,this.route.coordinates[currentIndexEnd].lat])
+      var pointb = turf.point([this.route.coordinates[nextIndexEnd].lng,this.route.coordinates[nextIndexEnd].lat])
+      this.bearingAfter = turf.bearing(pointa,pointb,{final: true})
+      return this.bearingAfter
+    }
+    return null
+  }
 }
 
 @Component({
@@ -49,6 +164,15 @@ building: Building;
   startMarker: L.Marker;
   endMarker: L.Marker;
   sat: any;
+  routePath: Route;
+  voices: any;
+
+  //TO control the instruction given to exaclty once
+  isInstructionGiven = false;
+
+  currentRoute = null;
+  stPT
+  snPT
 
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
@@ -93,11 +217,22 @@ building: Building;
     this.renderMap();
     this.reactiveForm();
 
+
     this.filteredOptions = this.myControl.valueChanges
       .pipe(
         startWith(''),
         map(value => this._filter(value))
       );
+
+    this.loadVoices();
+  }
+
+  //to change voice. Browsers load it async so need to set it on an event
+  loadVoices(){
+    window.speechSynthesis.onvoiceschanged = ()=> {
+      this.voices = window.speechSynthesis.getVoices();
+    };
+
   }
 
   reactiveForm(){
@@ -345,6 +480,71 @@ building: Building;
     this.initLeaflet();
     this.initOSMB();
 
+
+    //Leaflet routing machine
+    var routing = L.Routing.control({
+      router: new L.Routing.GraphHopper(undefined , {
+        serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
+      }),
+      showAlternatives: true,
+      // routeWhileDragging: true,
+      addWaypoints: false,
+      
+      plan: L.Routing.plan(
+        //set origin destination here
+        [ L.latLng(27.476714, 89.637408), L.latLng(27.430412, 89.647060) ],
+        {
+          createMarker: function (i: number, waypoint: any, n: number) {
+            var marker;
+            console.log(i)
+            if(i == 0){
+              marker = L.marker(waypoint.latLng, {
+                icon: L.icon({
+                  iconUrl: 'assets/marker-red.png',
+                  iconSize: [15, 15]
+                })
+              });
+            }else{
+              marker = L.marker(waypoint.latLng) 
+            }
+            return marker;
+          }
+        }
+      )
+
+    }).addTo(this.map);
+
+
+    //The routing object
+    // initialize the routng and navigation interface from here
+
+    //On route found this is triggered
+    routing.on('routesfound',(e)=>{
+      //TODO this.currentRoute may be redundant remove after review
+      this.currentRoute = e.routes[0];
+      console.log(this.currentRoute);
+
+      //testgin updateRouteFunction
+      let position:ll = {
+        lat:27.476837,
+        lng:89.637161
+      }
+       
+      //assigning to new route path class
+      this.routePath = new Route(this.currentRoute);
+
+      // this.updateRoute(position)
+    })
+
+
+    this.map.on('click',<LeafletMouseEvent>(e)=>{
+    //TODO: show and hide details of place on map click
+      // console.log(e.latlng)
+
+      //TODO testing purpose remove later or when you figure out how to mock route locations
+      this.updateRoute(e.latlng)
+    })
+
     // this.map = L.map('map',{
     //   center:[27.4712,89.64191],
     //   zoom: 13,
@@ -454,6 +654,151 @@ building: Building;
         this.myCircle = L.circle(e.latlng,radius).addTo(this.map);
       }
     });
+  }
+
+
+  startNavigation(){
+
+      if(this.currentRoute !== null){
+        let coordinates = this.currentRoute.coordinates.map(x => [x.lat,x.lng]);
+        let ls = turf.lineString(coordinates);
+
+        //TODO: this will be the location update points
+        // var pt = turf.point([e.latlng.lat,e.latlng.lng]);
+        // if(this.stPT !== undefined){
+        //   this.stPT.setLatLng(new L.LatLng(e.latlng.lat,e.latlng.lng));
+        //   // stPT = null;
+        // }else{
+        //   this.stPT = L.marker([e.latlng.lat,e.latlng.lng],{icon: this.redMarker}).addTo(this.map);
+        // }
+
+        //snaped point on line
+        // var snapped = turf.nearestPointOnLine(ls,pt,{units:'meters'});
+        // if(snapped.properties.dist * 100 < 30){
+        //   if(this.snPT !== undefined ){
+        //     this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]));
+        //   }else{
+        //     this.snPT = L.marker([snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]]).addTo(this.map);
+        //   }
+        // }
+        // console.log(snapped)
+
+      }
+  }
+
+
+  // TODO Function to update navigation on locatio change
+  updateRoute(location){
+      if(this.routePath !== undefined){
+        let coordinates = this.routePath.route.coordinates.map(x => [x.lng,x.lat]);
+        let ls = turf.lineString(coordinates);
+
+        let currentLocation = turf.point([location.lng,location.lat]);
+
+        //snaped point on line
+        //TODO maybe this cann be moved outside to the checkvalidLocation function. Review
+        let snapped = turf.nearestPointOnLine(ls,currentLocation,{units:'meters'});
+        console.log("snapped dist now: "+snapped.properties.dist)
+
+        if(snapped.properties.dist < 30){
+          //Updating the current location on the route
+          if(this.snPT !== undefined ){
+            this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]));
+          }else{
+            this.snPT = L.marker([snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]]).addTo(this.map);
+          }
+
+          this.calcualteLegDistanceRemaining(snapped.geometry.coordinates,snapped.properties.index)
+          console.log(snapped)
+
+          if(this.routePath.legDistanceRemaining < 100){
+            //TODO recite instruction exactly once here
+            if(!this.isInstructionGiven){
+              var instruction = this.routePath.getCurrentLegInstruction()
+              var msg = new SpeechSynthesisUtterance(instruction.text);
+
+              msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
+              console.log(this.voices)
+              // msg.voice = this.voices[10]
+              window.speechSynthesis.speak(msg)
+              this.isInstructionGiven = true
+            }
+          }
+          //TODO Update route leg index if maneuver is complete 
+          var isManeuverComplete = this.checkManeuverComplete(location)
+          var forceIndexIncreate = this.routePath.legDistanceRemaining == 0 && !isManeuverComplete
+          if(isManeuverComplete || forceIndexIncreate){
+            if(this.routePath.incrementIndex()){
+              console.log("moved to next route leg")
+              this.isInstructionGiven = false
+            }else{
+              console.log("I think its end of route")
+              //TODO: redirect to map view from here
+            }
+          }
+        }
+      }
+  }
+
+  calcualteLegDistanceRemaining(location,index){
+    // Leg distance remaining calculation
+    var currentInstruction = this.routePath.getCurrentLegInstruction()
+    var nextInstructionPosition = this.routePath.getNextStartPosition()
+    if(currentInstruction.index < index){
+      this.routePath.legDistanceRemaining = 0;
+      console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
+    }else{
+      if(nextInstructionPosition !== null){
+        var endofLegPoint = turf.point([nextInstructionPosition.lng,nextInstructionPosition.lat])
+        var currentPoint = turf.point(location)
+        var legDistnaceRemaining = turf.distance(currentPoint,endofLegPoint,{units: 'meters'})
+        this.routePath.legDistanceRemaining = legDistnaceRemaining;
+        console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
+      }else{
+        // readched end of journey
+        var endIndex = currentInstruction.index;
+        var endCoordinate = this.routePath.route.coordinates[endIndex]
+        var endofLegPoint = turf.point([endCoordinate.lng,endCoordinate.lat])
+        var currentPoint = turf.point(location)
+        var legDistnaceRemaining = turf.distance(currentPoint,endofLegPoint,{units: 'meters'})
+        this.routePath.legDistanceRemaining = legDistnaceRemaining;
+        console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
+      }
+    }
+
+
+  }
+
+  checkManeuverComplete(location){
+    if(this.routePath.legDistanceRemaining < 30){
+
+      var nextBearing = this.routePath.getNextBearing()
+      var currentBearing = this.routePath.getCurrentBearing()
+      //TODO think these will both become null when the driver has reached end of route. Check if thats true
+      if(nextBearing == null && currentBearing == null){
+        console.log("maybe end of line")
+        return true
+      }
+      var turnAngle = this.angleBetween(currentBearing,nextBearing)
+
+      // var userAngleFromTurn = this.angleBetween(location.getBearing(),turnAngle)
+
+      //if the user bearing is less than the offset allowed then chance are it might be complete but wait for distance remaining to go to zero before increasing index
+      if(turnAngle <= 30){
+        console.log("waiting for leg distance to end now")
+        return this.routePath.legDistanceRemaining == 0;
+      }else{
+        //TODO this comes when the device gets the users bearing
+        // return userAngleFromTurn <= 30
+        return false;
+      }
+    }
+  }
+
+  //Helper functions
+  angleBetween(anglea,angleb){
+    var a = Math.abs(anglea - angleb) % 360
+    return a > 180 ? 360 - a : a
   }
 
 }

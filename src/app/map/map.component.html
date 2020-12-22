@@ -1,5 +1,7 @@
 <div>
   <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
+
+
       <mat-drawer #drawer  class="drawer-content">
         <div class = "search-result">
           <mat-card *ngFor = "let address of addresses"  class="result-card">
@@ -74,7 +76,6 @@
       <button class="directionIcon" >
         <mat-icon matSuffix (click)="openDrawer();" >directions</mat-icon>
       </button>
-      
   </div>
 
   <div id="customsearch" class="search-div" *ngIf="showdirbox">
@@ -92,7 +93,7 @@
         </mat-form-field>
       </form>
   </div>
-  <div class = "toggle-div">
-    <label class="switch"><input type="checkbox" (change)="toggle3d($event)" id="togBtn"><div class="slider round"><!--ADDED HTML --><span class="on">3D</span><span class="off">2D</span><!--END--></div></label>
-  </div>
+  <!-- <div class = "toggle-div">
+    <label class="switch"><input type="checkbox" (change)="toggle3d($event)" id="togBtn"><div class="slider round"><span class="on">3D</span><span class="off">2D</span></div></label>
+  </div> -->
 </div>
