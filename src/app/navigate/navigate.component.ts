@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { Route } from '../model/Route';
 import { RouteStore } from '../store/RouteStore';
 import * as turf from "@turf/turf";
+import {Router} from "@angular/router"
 
 @Component({
   selector: 'app-navigate',
@@ -22,8 +23,28 @@ export class NavigateComponent implements OnInit {
   voices: any;
 
 
+  //Markers
+  positionMarker: L.Marker;
+
+
+  // icons
+  blueMarker = L.icon({
+    iconUrl: 'assets/mymarker.png',
+    iconSize: [20, 20]
+  });
+
+  //Mock location variavles
+  locationGenerator: any;
+  ismocklocation=true;
+
+
+  //Display texts
+  showInstruction;
+  showDistance;
+
   constructor(
-    private routeStore : RouteStore
+    private routeStore : RouteStore,
+    private router: Router
   ) { }
 
   ngOnInit() {
@@ -33,10 +54,13 @@ export class NavigateComponent implements OnInit {
     });
     this.renderMap();
     this.routePath = this.routeStore.storage;
-    console.log(this.routePath);
-    this.loadVoices();
-    this.renderRoute();
+    if(this.routePath == null){
+      // this.router.navigate(['/home']);
+    }else{
+      this.renderRoute();
 
+    }
+    this.loadVoices();
   }
 
   //to change voice. Browsers load it async so need to set it on an event
@@ -44,7 +68,6 @@ export class NavigateComponent implements OnInit {
     window.speechSynthesis.onvoiceschanged = ()=> {
       this.voices = window.speechSynthesis.getVoices();
     };
-
   }
 
   initLeaflet(){
@@ -58,53 +81,20 @@ export class NavigateComponent implements OnInit {
 
   renderRoute(){
     let routeGeom = this.routePath.route.coordinates.map(x => [x.lat,x.lng]);
-    L.polyline(routeGeom,{
+    let routePline = L.polyline(routeGeom,{
       color:'blue',
-      weight:3,
-      opacity:0.7,
+      weight:4,
+      opacity:0.8,
       smoothFactor:1
     }).addTo(this.map);
-    console.log(routeGeom);
+    this.map.fitBounds(routePline.getBounds());
+    
+    //Initial distance of route
+    this.showDistance = Math.round(this.routePath.route.summary.totalDistance);
   }
 
   renderMap() {
     this.initLeaflet();
-    //Leaflet routing machine
-    //TODO: display for now
-    // var routing = L.Routing.control({
-    //   router: new L.Routing.GraphHopper(undefined , {
-    //     serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
-    //   }),
-    //   showAlternatives: true,
-    //   // routeWhileDragging: true,
-    //   addWaypoints: false,
-      
-    //   plan: L.Routing.plan(
-    //     //set origin destination here
-    //     [ L.latLng(27.476714, 89.637408), L.latLng(27.430412, 89.647060) ],
-    //     {
-    //       createMarker: function (i: number, waypoint: any, n: number) {
-    //         var marker;
-    //         console.log(i)
-    //         if(i == 0){
-    //           marker = L.marker(waypoint.latLng, {
-    //             icon: L.icon({
-    //               iconUrl: 'assets/marker-red.png',
-    //               iconSize: [15, 15]
-    //             })
-    //           });
-    //         }else{
-    //           marker = L.marker(waypoint.latLng) 
-    //         }
-    //         return marker;
-    //       }
-    //     }
-    //   )
-
-    // }).addTo(this.map);
-
-
-
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{
       //TODO testing purpose remove later or when you figure out how to mock route locations
@@ -119,11 +109,38 @@ export class NavigateComponent implements OnInit {
     L.control.layers(baseMaps).addTo(this.map);
   }
 
+  // Start navigating
+  startNavigation(){
+    // TODO get current location and process
+    if(this.ismocklocation){
+      this.startMockLocation()
+    }
+  }
 
+  //location route mocker for test
+  startMockLocation(){
+    let coordinates = this.routePath.route.coordinates;
+    this.locationGenerator = this.generateMock(coordinates)
+    console.log("called")
+
+    let timer = window.setInterval(()=>{
+      let loc = this.locationGenerator.next()
+      if(loc.done == true){
+        clearInterval(timer);
+      }
+      console.log(loc.value)
+      this.updateRoute(loc.value)
+    },50)
+  }
+
+  *generateMock(coords){
+    for(let coord of coords){
+      yield coord
+    }
+  }
 
 
   //Route Processing functions
-
   updateRoute(location){
       if(this.routePath !== undefined){
         let coordinates = this.routePath.route.coordinates.map(x => [x.lng,x.lat]);
@@ -141,20 +158,41 @@ export class NavigateComponent implements OnInit {
           if(this.snPT !== undefined ){
             this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]));
           }else{
-            this.snPT = L.marker([snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]]).addTo(this.map);
+            this.snPT = L.marker([snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]],{
+              icon: this.blueMarker
+            }).addTo(this.map);
           }
 
           this.calcualteLegDistanceRemaining(snapped.geometry.coordinates,snapped.properties.index)
           console.log(snapped)
 
+          this.showDistance = Math.round(this.routePath.legDistanceRemaining) 
+
           if(this.routePath.legDistanceRemaining < 100){
             //TODO recite instruction exactly once here
             if(!this.isInstructionGiven){
               var instruction = this.routePath.getCurrentLegInstruction()
-              var msg = new SpeechSynthesisUtterance(instruction.text);
+              var dist = Math.round(this.routePath.legDistanceRemaining);
+              
+              var inst = ""
+              if(instruction.type == "DestinationReached"){
+                inst = "You have arrived. Thank you for using druuk map. Kaa din chay";
+              }else if(instruction.type == "Head" || instruction.type == "Straight"){
+                if(dist == 0){
+                  inst = instruction.text
+                }
+                inst = instruction.text + " for " + dist + " meters"
+              }else{
+                if(dist == 0){
+                  inst = instruction.text;
+                }else{
+                  inst = "In " + dist + " meters " + instruction.text
+                }
+              }
+              this.showInstruction = instruction.text;
+              var msg = new SpeechSynthesisUtterance(inst);
 
               msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
-              console.log(this.voices)
               // msg.voice = this.voices[10]
               window.speechSynthesis.speak(msg)
               this.isInstructionGiven = true
@@ -170,6 +208,9 @@ export class NavigateComponent implements OnInit {
             }else{
               console.log("I think its end of route")
               //TODO: redirect to map view from here
+              setTimeout(()=>{
+                this.router.navigate(['/home']);
+              },500)
             }
           }
         }

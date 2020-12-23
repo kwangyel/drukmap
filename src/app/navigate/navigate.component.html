@@ -1,1 +1,14 @@
 <div id="navmap" > </div>
+<mat-card class="directions">
+    <mat-card-header>
+    <mat-card-title>{{showDistance}} meters.</mat-card-title>
+    <mat-card-subtitle>{{showInstruction}}</mat-card-subtitle>
+    <mat-icon>directions</mat-icon>
+    </mat-card-header>
+        <mat-chip-list>
+            <mat-chip color = "primary" selected = "true" (click)="startNavigation()">Start Navigation</mat-chip>
+            <!-- TODO put an ng if here to stop toggle between start and stop navigate -->
+            <mat-chip color = "primary" selected = "true" *ngIf = "false">Stop Navigation</mat-chip>
+            <mat-chip color = "accent" selected = "true">Exit</mat-chip>
+        </mat-chip-list>
+</mat-card>

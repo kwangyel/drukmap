@@ -16,6 +16,7 @@ import {
   MatMenuModule,
   MatGridListModule,
   MatDialogModule,
+  MatChipsModule,
   MatSnackBarModule} from '@angular/material';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -50,6 +51,7 @@ import { NavigateComponent } from './navigate/navigate.component';
     MatGridListModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatChipsModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule,
