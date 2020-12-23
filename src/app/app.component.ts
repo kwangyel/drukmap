@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { AuthenticationService } from './service/authentication.service';
 import { Router } from '@angular/router';
 import {Location} from '@angular/common';
+import { RouteStore } from './store/RouteStore';
 
 export class MatMenuListItem {
   menuLinkText: string;
@@ -12,7 +13,8 @@ export class MatMenuListItem {
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  providers: [RouteStore]
 })
 export class AppComponent implements OnInit {
 

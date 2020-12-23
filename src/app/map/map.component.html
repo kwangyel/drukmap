@@ -1,10 +1,8 @@
 <div>
   <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
-
-
       <mat-drawer #drawer  class="drawer-content">
         <div class = "search-result">
-          <mat-card *ngFor = "let address of addresses"  class="result-card">
+          <!-- <mat-card *ngFor = "let address of addresses"  class="result-card">
             <a (click)="gotoplace(address.geom.coordinates)">
               {{address.address}}
             </a>
@@ -19,9 +17,9 @@
             <a (click)="changetopoint(address.address)">
               {{address.address}}
             </a>
-          </mat-card>
+          </mat-card> -->
+          <a (click) = "startNavigation()"> Navigate</a>
         </div>
-
       </mat-drawer>
       <mat-drawer-content >
         <div class="map-container">
@@ -62,10 +60,10 @@
     </button>
       <form [formGroup]="searchform" class="search-box">
         <mat-form-field class="search-input" appearance="none" >
-          <input  matInput placeholder="Search DrukMap" formControlName="address" required [matAutocomplete]="auto">
-            <mat-autocomplete #auto="matAutocomplete">
-              <mat-option *ngFor="let option of filteredOptions | async" [value]="option">
-                {{option}}
+          <input  matInput placeholder="Search DrukMap" formControlName="address" (input) = "onSearchChange($event.target.value)" required [matAutocomplete]="auto">
+            <mat-autocomplete #auto="matAutocomplete" [displayWith]="getOptionText">
+              <mat-option *ngFor="let option of options" (onSelectionChange)="onSearchSelected($event.source.value)" [value]="option" >
+                {{option.address}}
               </mat-option>
             </mat-autocomplete>
         </mat-form-field>
@@ -86,7 +84,6 @@
       </form>
 
       <form [formGroup]="dirform" class="search-box">
-
         <mat-form-field class="search-input" appearance="fill" >
           <input  matInput placeholder="to location" (keypress)="onToChange($event)" formControlName="topoint" required>
           <mat-icon matSuffix (click)="getPath();">search</mat-icon>

@@ -24,12 +24,14 @@ import { LayoutModule } from '@angular/cdk/layout';
 import { MatListModule } from '@angular/material/list';
 import { MapComponent } from './map/map.component';
 import { SplashScreenComponent } from './splash-screen/splash-screen.component';
+import { NavigateComponent } from './navigate/navigate.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     MapComponent,
     SplashScreenComponent,
+    NavigateComponent,
   ],
   imports: [
     BrowserModule,

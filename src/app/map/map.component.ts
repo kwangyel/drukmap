@@ -7,14 +7,14 @@ import { MatAutocomplete } from "@angular/material/autocomplete";
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
+import { RouteStore } from '../store/RouteStore';
 
-import {Observable} from 'rxjs';
-import {map, startWith} from 'rxjs/operators';
-
+import {Router} from "@angular/router"
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
 import * as turf from '@turf/turf';
-import { lineString } from '@turf/turf';
+import { Route } from '../model/Route';
+
 
 declare let OSMBuildings:any;
 
@@ -29,108 +29,6 @@ interface ll {
   lng: number;
 }
 
-export class Route {
-  //Class variables
-  route: any;
-  currentLegIndex: number;
-  legDistanceRemaining: number;
-  currentBearing : number;
-  bearingAfter = null;
-  bearingAfterIndex: number;
-
-  constructor(currentRoute){
-    this.route = currentRoute;
-    this.currentLegIndex = 0;
-    this.initBearing()
-  }
-  
-  // class methods
-
-  //initialize bearing with bearing of starting leg
-  initBearing(){
-    let pointa = turf.point([this.route.coordinates[0].lng,this.route.coordinates[0].lat])
-    let index = this.route.instructions[1].index
-    let pointb = turf.point([this.route.coordinates[index].lng,this.route.coordinates[index].lat])
-    this.currentBearing = turf.bearing(pointa,pointb,{final: true})
-  }
-
-  //increment Index when maneuver is complete
-  incrementIndex(){
-    if(this.route.instructions.length > this.currentLegIndex + 1){
-      this.currentLegIndex++
-      return true
-    }
-    return false
-  }
-  // Get current leg instruction
-  getCurrentLegInstruction(){
-    if(this.route.instructions.length > this.currentLegIndex){
-      return this.route.instructions[this.currentLegIndex]
-    }
-    return null;
-  }
-
-  //get Starting coordinate of next leg
-  getNextStartPosition(){
-    if(this.route.instructions.length > (this.currentLegIndex + 1)){
-      var index = this.route.instructions[this.currentLegIndex + 1].index
-      return this.route.coordinates[index]
-    }
-    return null;
-  }
-
-  //Get next leg instruction
-  getNextLegInstruction(){
-    if(this.route.instructions.length > (this.currentLegIndex + 1)){
-      return this.route.instructions[this.currentLegIndex + 1]
-    }
-    return null;
-  }
-
-  //get end point of current instruction
-  getEndIndexCurrentInstruction(){
-    if(this.route.instructions.length > (this.currentLegIndex + 1)){
-      return this.route.instructions[this.currentLegIndex + 1].index
-    }
-    return null;
-  }
-
-  //get end point of next instruction
-  getEndIndexNextInstruction(){
-    if(this.route.instructions.length > (this.currentLegIndex + 2)){
-      return this.route.instructions[this.currentLegIndex + 2].index
-    }
-    return null;
-  }
-
-  //Get current bearing
-  getCurrentBearing(){
-    var currInst= this.getCurrentLegInstruction()
-    var startIndex = currInst.index
-    var currentIndexEnd = this.getEndIndexCurrentInstruction()
-    if(startIndex !== null && currentIndexEnd !== null){
-      var pointa = turf.point([this.route.coordinates[startIndex].lng,this.route.coordinates[startIndex].lat])
-      var pointb = turf.point([this.route.coordinates[currentIndexEnd].lng,this.route.coordinates[currentIndexEnd].lat])
-      this.bearingAfter = turf.bearing(pointa,pointb,{final: true})
-      return this.bearingAfter
-    }
-    return null
-    return this.currentBearing
-  }
-
-  //get bearing after maneuver
-  getNextBearing(){
-    var nextIndexEnd = this.getEndIndexNextInstruction()
-    var currentIndexEnd = this.getEndIndexCurrentInstruction()
-    if(nextIndexEnd !== null && currentIndexEnd !== null){
-      var pointa = turf.point([this.route.coordinates[currentIndexEnd].lng,this.route.coordinates[currentIndexEnd].lat])
-      var pointb = turf.point([this.route.coordinates[nextIndexEnd].lng,this.route.coordinates[nextIndexEnd].lat])
-      this.bearingAfter = turf.bearing(pointa,pointb,{final: true})
-      return this.bearingAfter
-    }
-    return null
-  }
-}
 
 @Component({
   selector: 'app-map',
@@ -139,15 +37,14 @@ export class Route {
 })
 export class MapComponent implements OnInit {
   myControl = new FormControl();
-  options= ['One', 'Two', 'Three'];
-  filteredOptions: Observable<string[]>;
+  options = [];
   show3d = false;
   show2d = true;
   addresses=[];
   frompoints = [];
   topoints = [];
   geojson: any;
-building: Building;
+  building: Building;
   locateId:any;
   myPosition:L.Marker;
   myCircle:L.Circle;
@@ -203,6 +100,8 @@ building: Building;
     private searchService : SearchService,
     private dataservice: DataService,
     private fb : FormBuilder,
+    private router: Router,
+    private routeStore: RouteStore,
   ) {
     this.building = new Building();
   }
@@ -216,24 +115,8 @@ building: Building;
     });
     this.renderMap();
     this.reactiveForm();
-
-
-    this.filteredOptions = this.myControl.valueChanges
-      .pipe(
-        startWith(''),
-        map(value => this._filter(value))
-      );
-
-    this.loadVoices();
   }
 
-  //to change voice. Browsers load it async so need to set it on an event
-  loadVoices(){
-    window.speechSynthesis.onvoiceschanged = ()=> {
-      this.voices = window.speechSynthesis.getVoices();
-    };
-
-  }
 
   reactiveForm(){
     this.searchform = this.fb.group({
@@ -257,8 +140,8 @@ building: Building;
 
   //goes to xy coordinate on the map and marks with marker and zoom to that place
   gotoplace(coord){
-    let lng = coord[0][0];
-    let lat = coord[0][1];
+    let lat = coord.lat
+    let lng = coord.lng
     if(this.gotoPlaceMarker !== undefined){
       this.map.removeLayer(this.gotoPlaceMarker);
     }
@@ -368,6 +251,39 @@ building: Building;
         }
     });
   }
+
+  //when the search value is selected
+  onSearchSelected(value){
+    var pos:ll = {
+      lat: value.geom.coordinates[0][1],
+      lng: value.geom.coordinates[0][0]
+    }
+    console.log(pos)
+    // this.gotoPlaceMarker(pos)
+  }
+
+  //to display clicked value as text
+  getOptionText(option){
+    return option.address
+  }
+
+  //Everytime text input changers
+  onSearchChange(searchValue: string): void {  
+    console.log(searchValue);
+
+    this.searchService.searchAddress(searchValue).subscribe(response=>{
+        if(response.success === "true"){
+          // var data = response.data.map(x => x.address)
+          this.options = response.data;
+        }else if (response.success === "false"){
+        }
+    });
+
+    //
+
+  
+  }
+
   //search the given address in the DB. Might need to move the state to the store if possible.
   searchLocation(){
     let address = this.searchform.get('address').value;
@@ -469,19 +385,30 @@ building: Building;
       maxZoom: 20,
       minZoom: 13,
     });
-    var drukmap= L.tileLayer.wms('http://{s}.myhome.bt:8080/geoserver/bhutan/wms', {
-      layers: 'bhutan:thimphu',
-      maxZoom: 20,
-      minZoom: 13,
-      format: 'image/png',
-      transparent: true
-    });
+    // var drukmap= L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
+    //   layers: 'bhutan:thimphu',
+    //   maxZoom: 20,
+    //   minZoom: 13,
+    //   format: 'image/png',
+    //   transparent: true
+    // });
 
     this.initLeaflet();
-    this.initOSMB();
+    // this.initOSMB();
 
+    // var zoneJsonUrl = "https://raw.githubusercontent.com/kwangyel/drukmap/master/zones.geojson";
+    // fetch(zoneJsonUrl).then(resp=> resp.json())
+    // .then((data)=>{
+    //   const zones = L.geoJSON(data).addTo(this.map);
+    // })
+
+    // fetch(pois).then(resp=> resp.json())
+    // .then((data)=>{
+    //   const pois = L.geoJSON(data).addTo(this.map);
+    // })
 
     //Leaflet routing machine
+    //TODO: display for now
     var routing = L.Routing.control({
       router: new L.Routing.GraphHopper(undefined , {
         serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
@@ -541,8 +468,8 @@ building: Building;
     //TODO: show and hide details of place on map click
       // console.log(e.latlng)
 
-      //TODO testing purpose remove later or when you figure out how to mock route locations
-      this.updateRoute(e.latlng)
+      // TODO testing purpose remove later or when you figure out how to mock route locations
+      // this.updateRoute(e.latlng)
     })
 
     // this.map = L.map('map',{
@@ -552,21 +479,23 @@ building: Building;
     //   layers: [sat]
     // });
 
-    var streeTile = L.tileLayer.wms('http://{s}.myhome.bt:8080/geoserver/bhutan/wms', {
-      layers: 'bhutan:street_11august',
-      maxZoom: 25,
-      minZoom: 13,
-      format: 'image/png',
-      transparent: true
-    }).addTo(this.map);
+    // var streeTile = L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
+    //   layers: 'bhutan:street_11august',
+    //   maxZoom: 25,
+    //   minZoom: 13,
+    //   format: 'image/png',
+    //   transparent: true
+    // }).addTo(this.map);
 
-    var bldgTile = L.tileLayer.wms('http://{s}.myhome.bt:8080/geoserver/bhutan/wms', {
-      layers: 'bhutan:building_numbers_11august',
-      maxZoom: 25,
-      minZoom: 13,
-      format: 'image/png',
-      transparent: true
-    }).addTo(this.map);
+    // var bldgTile = L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
+    //   layers: 'bhutan:building_numbers_11august',
+    //   maxZoom: 25,
+    //   minZoom: 13,
+    //   format: 'image/png',
+    //   transparent: true
+    // }).addTo(this.map);
+
+
 
     // let Search = L.Control.extend({
     //   onAdd : function(map){
@@ -580,7 +509,7 @@ building: Building;
     var baseMaps = {
       "Satellite Image": this.sat,
       "OSM base map": osm, 
-      "Drukmap Base": drukmap
+      // "Drukmap Base": drukmap
     };
 
     // this.http.get(`http://localhost:4200/assets/geojson/conv_T239.geojson`).subscribe((json: any) => {
@@ -596,10 +525,10 @@ building: Building;
     //   this.map.fitBounds(this.geojson.getBounds());
     // });
 
-    var overlayMaps = {
-      "Buildings": bldgTile,
-      "Streets": streeTile,
-    }
+    // var overlayMaps = {
+    //   "Buildings": bldgTile,
+    //   "Streets": streeTile,
+    // }
 
 
     let postbody = {
@@ -608,9 +537,7 @@ building: Building;
     }
   
 
-    
-
-    L.control.layers(baseMaps,overlayMaps).addTo(this.map);
+    L.control.layers(baseMaps).addTo(this.map);
 
     this.map.on('locationerror',(err)=>{
           if (err.code === 0) {
@@ -659,33 +586,11 @@ building: Building;
 
   startNavigation(){
 
-      if(this.currentRoute !== null){
-        let coordinates = this.currentRoute.coordinates.map(x => [x.lat,x.lng]);
-        let ls = turf.lineString(coordinates);
-
-        //TODO: this will be the location update points
-        // var pt = turf.point([e.latlng.lat,e.latlng.lng]);
-        // if(this.stPT !== undefined){
-        //   this.stPT.setLatLng(new L.LatLng(e.latlng.lat,e.latlng.lng));
-        //   // stPT = null;
-        // }else{
-        //   this.stPT = L.marker([e.latlng.lat,e.latlng.lng],{icon: this.redMarker}).addTo(this.map);
-        // }
-
-        //snaped point on line
-        // var snapped = turf.nearestPointOnLine(ls,pt,{units:'meters'});
-        // if(snapped.properties.dist * 100 < 30){
-        //   if(this.snPT !== undefined ){
-        //     this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]));
-        //   }else{
-        //     this.snPT = L.marker([snapped.geometry.coordinates[0],snapped.geometry.coordinates[1]]).addTo(this.map);
-        //   }
-        // }
-        // console.log(snapped)
-
+      if(this.routePath !== null){
+        this.routeStore.storage = this.routePath;
+        this.router.navigate(['/navigate']);
       }
   }
-
 
   // TODO Function to update navigation on locatio change
   updateRoute(location){
@@ -800,5 +705,6 @@ building: Building;
     var a = Math.abs(anglea - angleb) % 360
     return a > 180 ? 360 - a : a
   }
+
 
 }
