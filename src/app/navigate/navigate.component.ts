@@ -143,7 +143,7 @@ export class NavigateComponent implements OnInit {
     if(this.timer !== undefined){
       clearInterval(this.timer);
     }
-    this.router.navigate(['/home'])
+    this.router.navigate(['/'])
   }
 
 
