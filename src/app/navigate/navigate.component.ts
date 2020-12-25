@@ -65,7 +65,7 @@ export class NavigateComponent implements OnInit {
       this.renderRoute();
 
     }
-    this.loadVoices();
+    // this.loadVoices();
   }
 
   //to change voice. Browsers load it async so need to set it on an event
@@ -234,7 +234,7 @@ export class NavigateComponent implements OnInit {
               this.showInstruction = instruction.text;
               var msg = new SpeechSynthesisUtterance(inst);
 
-              msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
+              // msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
               // msg.voice = this.voices[10]
               window.speechSynthesis.speak(msg)
               this.isInstructionGiven = true
