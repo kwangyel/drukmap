@@ -15,6 +15,12 @@
   width: 25%;
   background-color: #FFFFFF;
 }
+@media (max-width:750px){
+  .drawer-content{
+    width: 50%;
+    background-color: #FFFFFF;
+  }
+}
 .search-div{
   z-index: 1;
   position: absolute;

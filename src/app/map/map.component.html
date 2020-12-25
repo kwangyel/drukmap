@@ -3,11 +3,11 @@
       <mat-drawer #drawer  class="drawer-content" (openedChange)="onDrawerEvent($event)">
         <div class = "search-result">
         
-          <!-- double form directions -->
-          <div *ngIf = "dirDouble">
             <div style = "width: 100%; display: flex; flex-direction: row; justify-content: flex-end; margin-bottom: 7px;">
               <mat-icon (click)="openDrawer()" style="vertical-align: right;">close</mat-icon>
             </div>
+          <!-- double form directions -->
+          <div *ngIf = "dirDouble">
             <!-- Origin form -->
             <div  class="dir-div">
                 <button class="drawer" >
