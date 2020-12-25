@@ -24,10 +24,10 @@
                   </mat-form-field>
                 </form>
                 <button class="searchIcon">
-                  <mat-icon matSuffix (click)="searchOrigin();" style="color: gray;">search</mat-icon>
+                  <mat-icon matSuffix style="color: gray;">search</mat-icon>
                 </button>
                 <button class="directionIcon" >
-                  <mat-icon matSuffix (click)="getOriginLocation();" >gps_fixed</mat-icon>
+                  <mat-icon matSuffix  >gps_fixed</mat-icon>
                 </button>
             </div>
             <br>
@@ -48,7 +48,7 @@
                 </mat-form-field>
               </form>
               <button class="searchIcon">
-                <mat-icon matSuffix (click)="searchOrigin();" style="color: gray;">search</mat-icon>
+                <mat-icon matSuffix style="color: gray;">search</mat-icon>
               </button>
             </div>
             <br>
@@ -129,28 +129,13 @@
         </mat-form-field>
       </form>
       <button class="searchIcon">
-        <mat-icon matSuffix (click)="searchLocation();" style="color: gray;">search</mat-icon>
+        <mat-icon matSuffix  style="color: gray;">search</mat-icon>
       </button>
       <button class="directionIcon" >
         <mat-icon matSuffix (click)="openDrawer();" >directions</mat-icon>
       </button>
   </div>  
   <!-- end poi search -->
-
-  <div id="customsearch" class="search-div" *ngIf="showdirbox">
-      <form [formGroup]="dirform" class="search-box">
-        <mat-form-field class="search-input" appearance="fill" >
-          <input  matInput placeholder="from location" (keypress)="onFromChange($event)" formControlName="frompoint" required>
-        </mat-form-field>
-      </form>
-
-      <form [formGroup]="dirform" class="search-box">
-        <mat-form-field class="search-input" appearance="fill" >
-          <input  matInput placeholder="to location" (keypress)="onToChange($event)" formControlName="topoint" required>
-          <mat-icon matSuffix (click)="getPath();">search</mat-icon>
-        </mat-form-field>
-      </form>
-  </div>
   <!-- <div class = "toggle-div">
     <label class="switch"><input type="checkbox" (change)="toggle3d($event)" id="togBtn"><div class="slider round"><span class="on">3D</span><span class="off">2D</span></div></label>
   </div> -->

@@ -431,6 +431,7 @@ export class MapComponent implements OnInit {
     }
   }
 
+  poiShare(){}
 
   openDrawer(){
     this.drawer.toggle();
