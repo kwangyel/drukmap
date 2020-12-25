@@ -1,17 +1,20 @@
 <div>
-<div id="navmap" > </div>
-<mat-card class="directions">
-    <mat-card-header>
-    <mat-card-title>{{showDistance}} meters.</mat-card-title>
-    <mat-card-subtitle>{{showInstruction}}</mat-card-subtitle>
-    <mat-icon>directions</mat-icon>
-    </mat-card-header>
-        <mat-chip-list>
-            <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == false" (click)="startNavigation()">Start Navigation</mat-chip>
-            <!-- TODO put an ng if here to stop toggle between start and stop navigate -->
-            <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == true" (click)="stopNavigation()">Stop Navigation</mat-chip>
-            <mat-chip color = "accent" selected = "true" (click)="exitNav()">Exit</mat-chip>
-        </mat-chip-list>
-</mat-card>
+    <div style="height: 80vh;">
+        <div id="navmap" > </div>
+    </div>
+    <mat-card >
+        <mat-card-header>
+        <mat-card-title>{{showDistance}} meters.</mat-card-title>
+        <mat-card-subtitle>{{showInstruction}}</mat-card-subtitle>
+        <mat-icon>directions</mat-icon>
+        </mat-card-header>
+            <mat-chip-list>
+                <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == false" (click)="startNavigation()">Start Navigation</mat-chip>
+                <!-- TODO put an ng if here to stop toggle between start and stop navigate -->
+                <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == true" (click)="stopNavigation()">Stop Navigation</mat-chip>
+                <mat-chip color = "accent" selected = "true" (click)="exitNav()">Exit</mat-chip>
+            </mat-chip-list>
+    </mat-card>
+
 
 </div>
