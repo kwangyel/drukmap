@@ -6,9 +6,9 @@
     <mat-icon>directions</mat-icon>
     </mat-card-header>
         <mat-chip-list>
-            <mat-chip color = "primary" selected = "true" (click)="startNavigation()">Start Navigation</mat-chip>
+            <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == false" (click)="startNavigation()">Start Navigation</mat-chip>
             <!-- TODO put an ng if here to stop toggle between start and stop navigate -->
-            <mat-chip color = "primary" selected = "true" *ngIf = "false">Stop Navigation</mat-chip>
-            <mat-chip color = "accent" selected = "true">Exit</mat-chip>
+            <mat-chip color = "primary" selected = "true" *ngIf = "isNavigate == true" (click)="stopNavigation()">Stop Navigation</mat-chip>
+            <mat-chip color = "accent" selected = "true" (click)="exitNav()">Exit</mat-chip>
         </mat-chip-list>
 </mat-card>

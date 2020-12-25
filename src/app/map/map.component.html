@@ -1,24 +1,95 @@
 <div>
-  <mat-drawer-container class="drawer-container" [hasBackdrop]="true">
-      <mat-drawer #drawer  class="drawer-content">
+  <mat-drawer-container class="drawer-container" [hasBackdrop]="false" >
+      <mat-drawer #drawer  class="drawer-content" (openedChange)="onDrawerEvent($event)">
         <div class = "search-result">
-          <!-- <mat-card *ngFor = "let address of addresses"  class="result-card">
-            <a (click)="gotoplace(address.geom.coordinates)">
-              {{address.address}}
-            </a>
+        
+          <!-- double form directions -->
+          <div *ngIf = "dirDouble">
+            <div style = "width: 100%; display: flex; flex-direction: row; justify-content: flex-end; margin-bottom: 7px;">
+              <mat-icon (click)="openDrawer()" style="vertical-align: right;">close</mat-icon>
+            </div>
+            <!-- Origin form -->
+            <div  class="dir-div">
+                <button class="drawer" >
+                  <mat-icon matSuffix > trip_origin</mat-icon>
+                </button>
+                <form [formGroup]="originform" class="search-box">
+                  <mat-form-field class="search-input" appearance="none" >
+                    <input  matInput placeholder="Set Origin" formControlName="origin" (input) = "onOriginSearch($event.target.value)" required [matAutocomplete]="origin">
+                      <mat-autocomplete #origin="matAutocomplete" [displayWith]="getOptionText">
+                        <mat-option *ngFor="let option of OriginOptions" (onSelectionChange)="onOriginSelected($event.source.value)" [value]="option" >
+                          {{option.address}}
+                        </mat-option>
+                      </mat-autocomplete>
+                  </mat-form-field>
+                </form>
+                <button class="searchIcon">
+                  <mat-icon matSuffix (click)="searchOrigin();" style="color: gray;">search</mat-icon>
+                </button>
+                <button class="directionIcon" >
+                  <mat-icon matSuffix (click)="getOriginLocation();" >gps_fixed</mat-icon>
+                </button>
+            </div>
+            <br>
+
+            <!-- Destinatin form -->
+            <div id="customsearch" class="dir-div">
+              <button class="drawer" >
+                <mat-icon matSuffix > pin_drop</mat-icon>
+              </button>
+              <form [formGroup]="destinationform" class="search-box">
+                <mat-form-field class="search-input" appearance="none" >
+                  <input  #destinput matInput placeholder="Set destination" formControlName="destination" (input) = "onDestinationSearch($event.target.value)" required [matAutocomplete]="auto">
+                    <mat-autocomplete #auto="matAutocomplete" [displayWith]="getOptionText">
+                      <mat-option *ngFor="let option of DestinationOptions" (onSelectionChange)="onDestinationSelected($event.source.value)" [value]="option" >
+                        {{option.address}}
+                      </mat-option>
+                    </mat-autocomplete>
+                </mat-form-field>
+              </form>
+              <button class="searchIcon">
+                <mat-icon matSuffix (click)="searchOrigin();" style="color: gray;">search</mat-icon>
+              </button>
+            </div>
+            <br>
+            <!-- get dir button -->
+            <div>
+              <button mat-raised-button color="primary" style= "width: 100%;" (click) = "getDirections()">Get Directions</button>
+            </div>
+            <!-- end dir button  -->
+          </div>
+          <!-- End double form directions -->
+
+
+          <!-- Poi details  -->
+          <mat-card *ngIf = "poiName">
+              <mat-card-header>
+                <mat-card-title>{{poiName}}</mat-card-title>
+                <mat-card-subtitle>Street: {{streetName}}</mat-card-subtitle>
+                <!-- TODO Image of the building should be here -->
+              </mat-card-header>
+                  <mat-chip-list>
+                      <mat-chip color = "primary" selected = "true" (click)="poiDirection()">Directions</mat-chip>
+                      <mat-chip color = "primary" selected = "true" (click)="poiShare()">Share</mat-chip>
+                  </mat-chip-list>
           </mat-card>
-          <mat-card *ngFor = "let address of frompoints"  class="result-card">
-            <a (click)="changefrompoint(address.address)">
-              {{address.address}}
-            </a>
+          <!-- end poi details -->
+
+
+          <!-- Iternary should come here -->
+          <br>
+          <mat-card *ngIf = "routeLength">
+              <mat-card-header>
+                <mat-card-title> Total Distance {{routeLength}} meters</mat-card-title>
+                <mat-card-subtitle>Estimated Time: {{routeTime}} mins without traffic</mat-card-subtitle>
+              </mat-card-header>
           </mat-card>
 
-          <mat-card *ngFor = "let address of topoints"  class="result-card">
-            <a (click)="changetopoint(address.address)">
-              {{address.address}}
-            </a>
-          </mat-card> -->
-          <a (click) = "startNavigation()"> Navigate</a>
+          <!-- Navigate button -->
+
+          <div *ngIf = "enableNav">
+            <button mat-raised-button color="primary" style= "width: 100%;" (click) = "startNavigation()">Start Navigation</button>
+          </div>
         </div>
       </mat-drawer>
       <mat-drawer-content >
@@ -35,18 +106,6 @@
                     <mat-icon style="color: blue;">location_searching</mat-icon>
                   </button>
               </div>
-
-              <div class="leaflet-bottom leaflet-left">
-                  <button style="
-                  width: 52px;
-                  border-radius: 23px;
-                  height: 52px;
-                  background: #ffffffa3;
-                  margin-bottom: 20px;
-                  border: none;" value="Cancel" class=" span3 leaflet-control"  (click)="getDirection()" >
-                    <mat-icon style="color: blue;">commute</mat-icon>
-                  </button>
-              </div>
             </div>
 
             <div id="osmb" [style.display]="show3d ? 'block' : 'none'"></div>
@@ -54,13 +113,14 @@
       </mat-drawer-content>
   </mat-drawer-container>
 
-  <div id="customsearch" class="search-div" *ngIf="showsearchbox" >
+  <!-- Poi search bar -->
+  <div id="customsearch" class="search-div" *ngIf="this.drawer.opened == false" >
     <button class="drawer" >
       <mat-icon matSuffix (click)="openDrawer();" >toc</mat-icon>
     </button>
       <form [formGroup]="searchform" class="search-box">
         <mat-form-field class="search-input" appearance="none" >
-          <input  matInput placeholder="Search DrukMap" formControlName="address" (input) = "onSearchChange($event.target.value)" required [matAutocomplete]="auto">
+          <input  matInput placeholder="Search DrukMap" (input) = "onSearchChange($event.target.value)" required [matAutocomplete]="auto">
             <mat-autocomplete #auto="matAutocomplete" [displayWith]="getOptionText">
               <mat-option *ngFor="let option of options" (onSelectionChange)="onSearchSelected($event.source.value)" [value]="option" >
                 {{option.address}}
@@ -74,7 +134,8 @@
       <button class="directionIcon" >
         <mat-icon matSuffix (click)="openDrawer();" >directions</mat-icon>
       </button>
-  </div>
+  </div>  
+  <!-- end poi search -->
 
   <div id="customsearch" class="search-div" *ngIf="showdirbox">
       <form [formGroup]="dirform" class="search-box">

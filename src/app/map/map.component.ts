@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, Renderer2, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { HttpClient } from '@angular/common/http';
 import { DataService } from '../service/data.service';
@@ -29,6 +29,12 @@ interface ll {
   lng: number;
 }
 
+interface searchPoint{
+  lat: number;
+  lng: number;
+  name: string;
+}
+
 
 @Component({
   selector: 'app-map',
@@ -37,7 +43,6 @@ interface ll {
 })
 export class MapComponent implements OnInit {
   myControl = new FormControl();
-  options = [];
   show3d = false;
   show2d = true;
   addresses=[];
@@ -57,6 +62,8 @@ export class MapComponent implements OnInit {
   showsearchbox=true;
   showdirbox = false;
   searchform: FormGroup;
+  originform: FormGroup;
+  destinationform: FormGroup;
   dirform: FormGroup;
   startMarker: L.Marker;
   endMarker: L.Marker;
@@ -64,15 +71,40 @@ export class MapComponent implements OnInit {
   routePath: Route;
   voices: any;
 
-  //TO control the instruction given to exaclty once
+  // search suggestions
+  options = [];
+  OriginOptions = [];
+  DestinationOptions = [];
+
+  //control the instruction given to exaclty once
   isInstructionGiven = false;
 
   currentRoute = null;
   stPT
   snPT
 
+  //Routing machine object
+  routing:any;
+
+  //POI details variable
+  poiName:any;
+  streetName: any;
+  originPoint: searchPoint;
+  destinationPoint: searchPoint;
+
+  // Display booleans
+  showPoiSearch: any;
+  dirDouble = true;
+  enableNav = false;
+
+  //Route details
+  routeLength: any;
+  routeTime: any;
+
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
+  @ViewChild('itenary',{static: false}) iteDiv: ElementRef;
+
 
   greenMarker = L.icon({
     iconUrl: 'assets/marker-green.png',
@@ -95,6 +127,7 @@ export class MapComponent implements OnInit {
   })
 
   constructor(
+    private renderer: Renderer2,
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private searchService : SearchService,
@@ -119,40 +152,68 @@ export class MapComponent implements OnInit {
 
 
   reactiveForm(){
-    this.searchform = this.fb.group({
-      address:[]
-    })
+    this.searchform = this.fb.group({})
+    this.originform = this.fb.group({
+      origin:[]
+    });
+    this.destinationform = this.fb.group({
+      destination:new FormControl()
+    });
     this.dirform = this.fb.group({
       frompoint:[],
       topoint:[]
     })
   }
 
-  //convert all to pascal case. Not needed as of now since fuzzy string is taking care of the matching
-  convertPascal(ss:String){
-    return ss.replace(
-      /\w\S*/g,
-      function(txt) {
-          return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
-    ); 
-  }
-
   //goes to xy coordinate on the map and marks with marker and zoom to that place
-  gotoplace(coord){
-    let lat = coord.lat
-    let lng = coord.lng
+  gotoplace(value){
+    var pos:ll = {
+      lat: value.geom.coordinates[0][1],
+      lng: value.geom.coordinates[0][0]
+    }
+    console.log(value)
+
+    let lat = pos.lat
+    let lng = pos.lng
     if(this.gotoPlaceMarker !== undefined){
       this.map.removeLayer(this.gotoPlaceMarker);
     }
     this.gotoPlaceMarker=L.marker([lat,lng],{icon: this.myMarker}).addTo(this.map);
-    this.map.setView([lat,lng],16);
+    this.map.flyTo([lat,lng],16);
+
+    //TODO show place deatils here
+    this.poiName = value.address
+    this.streetName = value.street_pry
+
+    //disable direction double form 
+    this.dirDouble = false
+
+    //set it up if directions pressed
+    this.destinationPoint = {
+      lat: pos.lat,
+      lng: pos.lng,
+      name: value.address
+    }
+
+    //Show details in drawer
+    this.drawer.toggle();
   }
 
-  private _filter(value: string): string[] {
-    const filterValue = value.toLowerCase();
+  //get directions when clicked on poi details
+  poiDirection(){
+    if(this.destinationPoint !== undefined){
+      this.dirDouble = true;
 
-    return this.options.filter(option => option.toLowerCase().includes(filterValue));
+      let obj = {
+        address: this.poiName,
+        geom:{
+          coordinates:[[this.destinationPoint.lng,this.destinationPoint.lat]]
+        }
+      }
+      // this.onDestinationSelected(obj)
+      this.destinationform.controls.destination.setValue(obj);
+      this.poiName = null
+    }
   }
 
   getDirection(){
@@ -210,60 +271,25 @@ export class MapComponent implements OnInit {
     });
 
   }
-  onFromChange($event){
-    let frompoint = this.dirform.get('frompoint').value;
-    this.searchService.searchAddress(frompoint).subscribe(response=>{
-        if(response.success === "true"){
-          this.frompoints= response.data;
-          this.drawer.open();
-        }else if (response.success === "false"){
-          this.snackBar.open(response.message,"",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-        }
-    });
-  }
-  changefrompoint(address){
-    this.dirform.patchValue({
-      frompoint:address
-    });
-    this.frompoints = [];
-  }
-  changetopoint(address){
-    this.dirform.patchValue({
-      topoint:address
-    });
-    this.topoints = [];
-  }
 
-  onToChange($event){
-    let toPoint= this.dirform.get('topoint').value;
-    this.searchService.searchAddress(toPoint).subscribe(response=>{
-        if(response.success === "true"){
-          this.topoints= response.data;
-          this.drawer.open();
-        }else if (response.success === "false"){
-          this.snackBar.open(response.message,"",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-        }
-    });
+  //Drawer event
+  onDrawerEvent(e: boolean){
+    if(e == false){
+      if(this.routing !== undefined){
+        this.map.removeControl(this.routing)
+      }
+    }
   }
-
   //when the search value is selected
   onSearchSelected(value){
-    var pos:ll = {
-      lat: value.geom.coordinates[0][1],
-      lng: value.geom.coordinates[0][0]
-    }
-    console.log(pos)
-    // this.gotoPlaceMarker(pos)
+    this.gotoplace(value)
   }
 
   //to display clicked value as text
   getOptionText(option){
+    if(option == null){
+      return 
+    }
     return option.address
   }
 
@@ -278,34 +304,138 @@ export class MapComponent implements OnInit {
         }else if (response.success === "false"){
         }
     });
-
-    //
-
-  
   }
 
-  //search the given address in the DB. Might need to move the state to the store if possible.
-  searchLocation(){
-    let address = this.searchform.get('address').value;
-    if(address !== ""){
-      console.log(address);
-      let obj=this.searchService.searchAddress(address).subscribe(response=>{
-        if(response.success === "true"){
-          this.addresses= response.data;
-        }else if (response.success === "false"){
-          this.snackBar.open(response.message,"",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-        }
-      },error=>{
-        console.log(error);
+  //Search origin
+  onOriginSearch(searchValue: string): void{
+    if(searchValue === ""){
+      this.originPoint= undefined
+    }else{
+      this.searchService.searchAddress(searchValue).subscribe(response=>{
+          if(response.success === "true"){
+            // var data = response.data.map(x => x.address)
+            this.OriginOptions = response.data;
+          }else if (response.success === "false"){
+          }
       });
     }
   }
 
+  onOriginSelected(value){
+    //TODO set origin
+    console.log(value)
+    this.originPoint = {
+      lat: value.geom.coordinates[0][1],
+      lng: value.geom.coordinates[0][0],
+      name: value.address
+    }
+  }
+
+  //Search desitnation 
+  onDestinationSearch(searchValue: string): void{
+    if(searchValue === ""){
+
+      this.destinationPoint = undefined 
+    }else{
+      this.searchService.searchAddress(searchValue).subscribe(response=>{
+          if(response.success === "true"){
+            // var data = response.data.map(x => x.address)
+            this.DestinationOptions = response.data;
+          }else if (response.success === "false"){
+          }
+      });
+    }
+  }
+  onDestinationSelected(value){
+    console.log(value)
+    //TODO set origin
+    this.destinationPoint= {
+      lat: value.geom.coordinates[0][1],
+      lng: value.geom.coordinates[0][0],
+      name: value.address
+    }
+  }
+
+  //Get directions button
+
+  getDirections(){
+    //Leaflet routing machine
+    if(this.originPoint !== undefined && this.destinationPoint !== undefined){
+      let pointa = L.latLng(this.originPoint.lat,this.originPoint.lng);
+      let pointb = L.latLng(this.destinationPoint.lat,this.destinationPoint.lng);
+
+      if(this.routing !== undefined){
+        this.map.removeControl(this.routing)
+      }
+      //Graphhopper api with LRM
+      this.routing = L.Routing.control({
+        router: new L.Routing.GraphHopper(undefined , {
+          serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
+        }),
+        showAlternatives: true,
+        // routeWhileDragging: true,
+        addWaypoints: false,
+        
+        plan: L.Routing.plan(
+          //set origin destination here
+          [ pointa,pointb ],
+          {
+            createMarker: function (i: number, waypoint: any, n: number) {
+              var marker;
+              console.log(i)
+              if(i == 0){
+                marker = L.marker(waypoint.latLng, {
+                  icon: L.icon({
+                    iconUrl: 'assets/marker-red.png',
+                    iconSize: [15, 15]
+                  })
+                });
+              }else{
+                marker = L.marker(waypoint.latLng,{
+                  icon: L.icon({
+                    iconUrl: 'assets/location.svg',
+                    iconSize: [20,20]
+                  })
+                }) 
+              }
+              return marker;
+            }
+          },
+        ),
+        fitSelectedRoutes: true
+
+      }).addTo(this.map);
+      this.routing.hide();
+
+      this.routing.on('routesfound',(e)=>{
+        //TODO this.currentRoute may be redundant remove after review
+        this.currentRoute = e.routes[0];
+        console.log(this.currentRoute);
+        
+        //assigning to new route path class
+        this.routePath = new Route(this.currentRoute);
+        console.log(this.routePath)
+        this.routeLength= Math.round(this.currentRoute.summary.totalDistance)
+        this.routeTime = Math.round(this.currentRoute.summary.totalTime/60) + 6
+
+        // show navigate button
+        this.enableNav = true;
+
+        // this.updateRoute(position)
+      })
+    }else{
+      if(this.routing !== undefined){
+        this.map.removeControl(this.routing)
+      }
+      console.log("empty")
+    }
+  }
+
+
   openDrawer(){
     this.drawer.toggle();
+    // TODO check if desitnation bar is set
+    // this.showPoiSearch = this.drawer.opened
   }
 
   //Zooms to the current location based on data from the device. TODO: need to fix this.
@@ -320,47 +450,6 @@ export class MapComponent implements OnInit {
     alert("you double clicked");
   }
 
-  initOSMB(){
-    var osmbuildings = new OSMBuildings({ container: 'osmb', position: { latitude: 27.4712, longitude: 89.64191}, zoom: 18, minZoom: 10, tilt:40,
-    rotation: 300,
-    effects: ['shadows'],
-    maxZoom: 20 });
-
-
-    // osmbuildings.addMapTiles('http://{s}.tile.osm.org/{z}/{x}/{y}.png');
-    osmbuildings.addMapTiles('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}');
-
-    osmbuildings.addGeoJSONTiles('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
-
-    osmbuildings.on('loadfeature', function(feature) {
-      console.log("feature:",feature);
-      var height= parseInt(feature.detail.properties.height);
-      var color=null;
-      if(height<1){
-        color="red";
-      }
-      else{
-        color="green";
-      }
-      feature.detail.properties.color=color;
-
-      return feature;
-    })
-
-    osmbuildings.on('pointerup', e => {
-      if (!e.features) {
-        osmbuildings.highlight(feature => {});
-        return;
-      }
-
-      const featureIdList = e.features.map(feature => feature.id);
-      osmbuildings.highlight(feature => {
-        if (featureIdList.indexOf(feature.id) > -1) {
-          return '#0ffc03';
-        }
-      });
-    });
-  }
 
   initLeaflet(){
     this.map = L.map('map',{
@@ -370,16 +459,8 @@ export class MapComponent implements OnInit {
       layers: [this.sat]
     });
   }
-  toggle3d($event){
-    if($event.target.checked == true){
-      this.show2d = false
-      this.show3d = true
-    }else{
-      this.show3d = false
-      this.show2d = true
-    }
-  }
 
+  
   renderMap() {
     var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
       maxZoom: 20,
@@ -407,61 +488,12 @@ export class MapComponent implements OnInit {
     //   const pois = L.geoJSON(data).addTo(this.map);
     // })
 
-    //Leaflet routing machine
-    //TODO: display for now
-    var routing = L.Routing.control({
-      router: new L.Routing.GraphHopper(undefined , {
-        serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
-      }),
-      showAlternatives: true,
-      // routeWhileDragging: true,
-      addWaypoints: false,
-      
-      plan: L.Routing.plan(
-        //set origin destination here
-        [ L.latLng(27.476714, 89.637408), L.latLng(27.430412, 89.647060) ],
-        {
-          createMarker: function (i: number, waypoint: any, n: number) {
-            var marker;
-            console.log(i)
-            if(i == 0){
-              marker = L.marker(waypoint.latLng, {
-                icon: L.icon({
-                  iconUrl: 'assets/marker-red.png',
-                  iconSize: [15, 15]
-                })
-              });
-            }else{
-              marker = L.marker(waypoint.latLng) 
-            }
-            return marker;
-          }
-        }
-      )
-
-    }).addTo(this.map);
 
 
     //The routing object
     // initialize the routng and navigation interface from here
 
     //On route found this is triggered
-    routing.on('routesfound',(e)=>{
-      //TODO this.currentRoute may be redundant remove after review
-      this.currentRoute = e.routes[0];
-      console.log(this.currentRoute);
-
-      //testgin updateRouteFunction
-      let position:ll = {
-        lat:27.476837,
-        lng:89.637161
-      }
-       
-      //assigning to new route path class
-      this.routePath = new Route(this.currentRoute);
-
-      // this.updateRoute(position)
-    })
 
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{

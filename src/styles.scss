@@ -204,3 +204,7 @@ input[type=number] {
 }
 
 
+// LRM hide the black box of itienary
+.leaflet-control-container .leaflet-routing-container-hide {
+  display: none;
+}

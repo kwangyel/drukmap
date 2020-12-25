@@ -36,11 +36,16 @@ export class NavigateComponent implements OnInit {
   //Mock location variavles
   locationGenerator: any;
   ismocklocation=true;
+  timer : any;
 
 
   //Display texts
   showInstruction;
   showDistance;
+
+
+  //Display booleans
+  isNavigate = false;
 
   constructor(
     private routeStore : RouteStore,
@@ -114,8 +119,35 @@ export class NavigateComponent implements OnInit {
     // TODO get current location and process
     if(this.ismocklocation){
       this.startMockLocation()
+    }else{
+      // TODO get user locaiton here
     }
+    this.isNavigate = true
   }
+
+  //Stop location/mock update. Resumable
+  stopNavigation(){
+    //Stopping the timer object if it was used in mocked location
+    if(this.timer !== undefined){
+      clearInterval(this.timer);
+    }
+    this.isNavigate = false;
+    //Clear user location update
+    //TODO implement this here 
+  }
+
+
+  //Go back to main view
+  exitNav(){
+    console.log("exit called")
+    if(this.timer !== undefined){
+      clearInterval(this.timer);
+    }
+    this.router.navigate(['/home'])
+  }
+
+
+
 
   //location route mocker for test
   startMockLocation(){
@@ -123,14 +155,14 @@ export class NavigateComponent implements OnInit {
     this.locationGenerator = this.generateMock(coordinates)
     console.log("called")
 
-    let timer = window.setInterval(()=>{
+    this.timer = window.setInterval(()=>{
       let loc = this.locationGenerator.next()
       if(loc.done == true){
-        clearInterval(timer);
+        clearInterval(this.timer);
       }
       console.log(loc.value)
       this.updateRoute(loc.value)
-    },50)
+    },1000)
   }
 
   *generateMock(coords){
@@ -141,6 +173,22 @@ export class NavigateComponent implements OnInit {
 
 
   //Route Processing functions
+  updateUserLocation(location){
+    //Updating the current location on the route
+    if(this.snPT !== undefined ){
+      this.snPT.setLatLng(new L.LatLng(location.geometry.coordinates[1],location.geometry.coordinates[0]));
+    }else{
+      this.snPT = L.marker([location.geometry.coordinates[1],location.geometry.coordinates[0]],{
+        icon: this.blueMarker
+      }).addTo(this.map);
+    }
+    //test to check current bearing
+    // console.log("bearing"+this.routePath.getCurrentBearing());
+    console.log(location)
+    this.map.setView([location.geometry.coordinates[1],location.geometry.coordinates[0]],18);
+
+  }
+
   updateRoute(location){
       if(this.routePath !== undefined){
         let coordinates = this.routePath.route.coordinates.map(x => [x.lng,x.lat]);
@@ -154,19 +202,13 @@ export class NavigateComponent implements OnInit {
         console.log("snapped dist now: "+snapped.properties.dist)
 
         if(snapped.properties.dist < 30){
-          //Updating the current location on the route
-          if(this.snPT !== undefined ){
-            this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]));
-          }else{
-            this.snPT = L.marker([snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]],{
-              icon: this.blueMarker
-            }).addTo(this.map);
-          }
-
           this.calcualteLegDistanceRemaining(snapped.geometry.coordinates,snapped.properties.index)
           console.log(snapped)
 
           this.showDistance = Math.round(this.routePath.legDistanceRemaining) 
+
+          //Update the user view and marker according the direction change
+          this.updateUserLocation(snapped)
 
           if(this.routePath.legDistanceRemaining < 100){
             //TODO recite instruction exactly once here
