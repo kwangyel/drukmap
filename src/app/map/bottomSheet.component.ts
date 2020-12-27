@@ -20,6 +20,9 @@ export class BottomSheet {
       this.onDirection.emit("direction");
       this._bottomSheetRef.dismiss();
     }
+    poiShare(){
+
+    }
 
 
 }

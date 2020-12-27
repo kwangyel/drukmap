@@ -31,11 +31,11 @@ export class DirectionDialog {
         });
     }
     poiShare(){}
-    onOriginSelected(){}
-    onDestinationSelected(){}
+    onOriginSelected(e){}
+    onDestinationSelected(e){}
     getOptionText(){}
-    onOriginSearch(){}
-    onDestinationSearch(){}
+    onOriginSearch(e){}
+    onDestinationSearch(e){}
     getDirections(){}
 
     
