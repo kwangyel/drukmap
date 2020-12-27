@@ -121,7 +121,7 @@ export class MapComponent implements OnInit {
   });
 
   myMarker = L.icon({
-    iconUrl: 'assets/mymarker.png',
+    iconUrl: 'assets/blue_dot.svg',
     iconSize: [20, 20]
   });
 
@@ -695,7 +695,7 @@ export class MapComponent implements OnInit {
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
-      if(radius<200){
+      if(radius<500){
         if(this.myPosition !== undefined){
           this.map.removeLayer(this.myPosition);
         }
