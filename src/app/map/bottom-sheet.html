@@ -1,0 +1,11 @@
+<mat-card >
+  <mat-card-header>
+    <mat-card-title>{{poiName}}</mat-card-title>
+    <mat-card-subtitle>Street: {{streetName}}</mat-card-subtitle>
+    <!-- TODO Image of the building should be here -->
+  </mat-card-header>
+      <mat-chip-list>
+          <mat-chip color = "primary" selected = "true" (click)="poiDirection()">Directions</mat-chip>
+          <mat-chip color = "primary" selected = "true" (click)="poiShare()">Share</mat-chip>
+      </mat-chip-list>
+</mat-card>

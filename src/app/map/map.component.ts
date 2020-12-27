@@ -8,12 +8,15 @@ import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 import { RouteStore } from '../store/RouteStore';
+import { MatBottomSheet, MatDialog} from '@angular/material/';
+import { BottomSheet } from "./bottomSheet.component"
 
 import {Router} from "@angular/router"
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
 import * as turf from '@turf/turf';
 import { Route } from '../model/Route';
+import { DirectionDialog } from './directionDialog.component';
 
 
 declare let OSMBuildings:any;
@@ -127,17 +130,18 @@ export class MapComponent implements OnInit {
   })
 
   constructor(
-    private renderer: Renderer2,
-    private http: HttpClient,
+    public directionDialog: MatDialog,
     private snackBar: MatSnackBar,
     private searchService : SearchService,
     private dataservice: DataService,
     private fb : FormBuilder,
     private router: Router,
     private routeStore: RouteStore,
+    private bottomsheet: MatBottomSheet,
   ) {
     this.building = new Building();
   }
+
 
 
 
@@ -148,6 +152,27 @@ export class MapComponent implements OnInit {
     });
     this.renderMap();
     this.reactiveForm();
+  }
+
+  // open bottomsheet poi details
+  openBottomSheet(details:any): void {
+    const bottomsheetref = this.bottomsheet.open(BottomSheet,{
+      data: details 
+    });
+    const botSub = bottomsheetref.instance.onDirection.subscribe((val)=>{
+      console.log(val)
+      this.poiDirection();
+    })
+    bottomsheetref.afterDismissed().subscribe(()=>{
+      botSub.unsubscribe();
+    })
+  }
+
+  // open dialog for directions form
+  openDialog(){
+    this.directionDialog.open(DirectionDialog,{
+      width:"100vw"
+    })
   }
 
 
@@ -195,8 +220,16 @@ export class MapComponent implements OnInit {
       name: value.address
     }
 
+    let botObj = {
+      poiName: this.poiName,
+      street: this.streetName
+    }
+
     //Show details in drawer
-    this.drawer.toggle();
+    // this.drawer.toggle();
+    
+    //sho details in bottomsheet
+    this.openBottomSheet(botObj);
   }
 
   //get directions when clicked on poi details
@@ -213,6 +246,10 @@ export class MapComponent implements OnInit {
       // this.onDestinationSelected(obj)
       this.destinationform.controls.destination.setValue(obj);
       this.poiName = null
+      // this.openDrawer()
+      this.openDialog()
+    }else{
+      console.log('no dest')
     }
   }
 
@@ -282,6 +319,12 @@ export class MapComponent implements OnInit {
   }
   //when the search value is selected
   onSearchSelected(value){
+    let details: searchPoint = {
+      lat: value.geom.coordinates[0][1],
+      lng: value.geom.coordinates[0][0],
+      name: value.address
+    }
+    // this.openBottomSheet(details)
     this.gotoplace(value)
   }
 
@@ -512,21 +555,21 @@ export class MapComponent implements OnInit {
     //   layers: [sat]
     // });
 
-    // var streeTile = L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
-    //   layers: 'bhutan:street_11august',
-    //   maxZoom: 25,
-    //   minZoom: 13,
-    //   format: 'image/png',
-    //   transparent: true
-    // }).addTo(this.map);
+    var streeTile = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+      layers: 'cite:street_11august',
+      maxZoom: 25,
+      minZoom: 13,
+      format: 'image/png',
+      transparent: true
+    }).addTo(this.map);
 
-    // var bldgTile = L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
-    //   layers: 'bhutan:building_numbers_11august',
-    //   maxZoom: 25,
-    //   minZoom: 13,
-    //   format: 'image/png',
-    //   transparent: true
-    // }).addTo(this.map);
+    var bldgTile = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+      layers: 'cite:building_numbers_11august',
+      maxZoom: 25,
+      minZoom: 13,
+      format: 'image/png',
+      transparent: true
+    }).addTo(this.map);
 
 
 
@@ -558,10 +601,10 @@ export class MapComponent implements OnInit {
     //   this.map.fitBounds(this.geojson.getBounds());
     // });
 
-    // var overlayMaps = {
-    //   "Buildings": bldgTile,
-    //   "Streets": streeTile,
-    // }
+    var overlayMaps = {
+      "Buildings": bldgTile,
+      "Streets": streeTile,
+    }
 
 
     let postbody = {
@@ -570,7 +613,7 @@ export class MapComponent implements OnInit {
     }
   
 
-    L.control.layers(baseMaps).addTo(this.map);
+    L.control.layers(baseMaps,overlayMaps).addTo(this.map);
 
     this.map.on('locationerror',(err)=>{
           if (err.code === 0) {
@@ -624,120 +667,4 @@ export class MapComponent implements OnInit {
         this.router.navigate(['/navigate']);
       }
   }
-
-  // TODO Function to update navigation on locatio change
-  updateRoute(location){
-      if(this.routePath !== undefined){
-        let coordinates = this.routePath.route.coordinates.map(x => [x.lng,x.lat]);
-        let ls = turf.lineString(coordinates);
-
-        let currentLocation = turf.point([location.lng,location.lat]);
-
-        //snaped point on line
-        //TODO maybe this cann be moved outside to the checkvalidLocation function. Review
-        let snapped = turf.nearestPointOnLine(ls,currentLocation,{units:'meters'});
-        console.log("snapped dist now: "+snapped.properties.dist)
-
-        if(snapped.properties.dist < 30){
-          //Updating the current location on the route
-          if(this.snPT !== undefined ){
-            this.snPT.setLatLng(new L.LatLng(snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]));
-          }else{
-            this.snPT = L.marker([snapped.geometry.coordinates[1],snapped.geometry.coordinates[0]]).addTo(this.map);
-          }
-
-          this.calcualteLegDistanceRemaining(snapped.geometry.coordinates,snapped.properties.index)
-          console.log(snapped)
-
-          if(this.routePath.legDistanceRemaining < 100){
-            //TODO recite instruction exactly once here
-            if(!this.isInstructionGiven){
-              var instruction = this.routePath.getCurrentLegInstruction()
-              var msg = new SpeechSynthesisUtterance(instruction.text);
-
-              msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
-              console.log(this.voices)
-              // msg.voice = this.voices[10]
-              window.speechSynthesis.speak(msg)
-              this.isInstructionGiven = true
-            }
-          }
-          //TODO Update route leg index if maneuver is complete 
-          var isManeuverComplete = this.checkManeuverComplete(location)
-          var forceIndexIncreate = this.routePath.legDistanceRemaining == 0 && !isManeuverComplete
-          if(isManeuverComplete || forceIndexIncreate){
-            if(this.routePath.incrementIndex()){
-              console.log("moved to next route leg")
-              this.isInstructionGiven = false
-            }else{
-              console.log("I think its end of route")
-              //TODO: redirect to map view from here
-            }
-          }
-        }
-      }
-  }
-
-  calcualteLegDistanceRemaining(location,index){
-    // Leg distance remaining calculation
-    var currentInstruction = this.routePath.getCurrentLegInstruction()
-    var nextInstructionPosition = this.routePath.getNextStartPosition()
-    if(currentInstruction.index < index){
-      this.routePath.legDistanceRemaining = 0;
-      console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
-    }else{
-      if(nextInstructionPosition !== null){
-        var endofLegPoint = turf.point([nextInstructionPosition.lng,nextInstructionPosition.lat])
-        var currentPoint = turf.point(location)
-        var legDistnaceRemaining = turf.distance(currentPoint,endofLegPoint,{units: 'meters'})
-        this.routePath.legDistanceRemaining = legDistnaceRemaining;
-        console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
-      }else{
-        // readched end of journey
-        var endIndex = currentInstruction.index;
-        var endCoordinate = this.routePath.route.coordinates[endIndex]
-        var endofLegPoint = turf.point([endCoordinate.lng,endCoordinate.lat])
-        var currentPoint = turf.point(location)
-        var legDistnaceRemaining = turf.distance(currentPoint,endofLegPoint,{units: 'meters'})
-        this.routePath.legDistanceRemaining = legDistnaceRemaining;
-        console.log("distance remoaning :"+this.routePath.legDistanceRemaining)
-      }
-    }
-
-
-  }
-
-  checkManeuverComplete(location){
-    if(this.routePath.legDistanceRemaining < 30){
-
-      var nextBearing = this.routePath.getNextBearing()
-      var currentBearing = this.routePath.getCurrentBearing()
-      //TODO think these will both become null when the driver has reached end of route. Check if thats true
-      if(nextBearing == null && currentBearing == null){
-        console.log("maybe end of line")
-        return true
-      }
-      var turnAngle = this.angleBetween(currentBearing,nextBearing)
-
-      // var userAngleFromTurn = this.angleBetween(location.getBearing(),turnAngle)
-
-      //if the user bearing is less than the offset allowed then chance are it might be complete but wait for distance remaining to go to zero before increasing index
-      if(turnAngle <= 30){
-        console.log("waiting for leg distance to end now")
-        return this.routePath.legDistanceRemaining == 0;
-      }else{
-        //TODO this comes when the device gets the users bearing
-        // return userAngleFromTurn <= 30
-        return false;
-      }
-    }
-  }
-
-  //Helper functions
-  angleBetween(anglea,angleb){
-    var a = Math.abs(anglea - angleb) % 360
-    return a > 180 ? 360 - a : a
-  }
-
-
 }

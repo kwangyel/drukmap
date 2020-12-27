@@ -14,6 +14,7 @@ import {
   MatIconModule,
   MatSidenavModule,
   MatMenuModule,
+  MatBottomSheetModule,
   MatGridListModule,
   MatDialogModule,
   MatChipsModule,
@@ -26,11 +27,15 @@ import { MatListModule } from '@angular/material/list';
 import { MapComponent } from './map/map.component';
 import { SplashScreenComponent } from './splash-screen/splash-screen.component';
 import { NavigateComponent } from './navigate/navigate.component';
+import { BottomSheet } from './map/bottomSheet.component';
+import { DirectionDialog } from './map/directionDialog.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     MapComponent,
+    BottomSheet,
+    DirectionDialog,
     SplashScreenComponent,
     NavigateComponent,
   ],
@@ -43,6 +48,7 @@ import { NavigateComponent } from './navigate/navigate.component';
     MatInputModule,
     MatSelectModule,
     MatToolbarModule,
+    MatBottomSheetModule,
     MatAutocompleteModule,
     MatCardModule,
     MatIconModule,
@@ -63,5 +69,6 @@ import { NavigateComponent } from './navigate/navigate.component';
   ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  entryComponents:[BottomSheet,DirectionDialog]
 })
 export class AppModule { }
