@@ -9,7 +9,7 @@
             <mat-form-field class="search-input" appearance="none" >
                 <mat-icon style= "vertical-align: bottom;" matPrefix > trip_origin</mat-icon>
                 <input  matInput placeholder="Set Origin" formControlName="origin" (input) = "onOriginSearch($event.target.value)" required [matAutocomplete]="origin">
-                <mat-icon matSuffix  >gps_fixed</mat-icon>
+                <mat-icon matSuffix (click) = "originLocation()" >gps_fixed</mat-icon>
                 <mat-autocomplete #origin="matAutocomplete" [displayWith]="getOptionText">
                 <mat-option *ngFor="let option of OriginOptions" (onSelectionChange)="onOriginSelected($event.source.value)" [value]="option" >
                     {{option.address}}

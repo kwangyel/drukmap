@@ -1,25 +1,23 @@
 import { Component, ElementRef, OnInit, Renderer2, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
-import { HttpClient } from '@angular/common/http';
 import { DataService } from '../service/data.service';
 import { MatDrawer} from '@angular/material/sidenav';
-import { MatAutocomplete } from "@angular/material/autocomplete";
 import { MatSnackBar} from '@angular/material/snack-bar';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 import { RouteStore } from '../store/RouteStore';
+import { SearchStore } from '../store/SearchStore';
 import { MatBottomSheet, MatDialog} from '@angular/material/';
 import { BottomSheet } from "./bottomSheet.component"
 
 import {Router} from "@angular/router"
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
-import * as turf from '@turf/turf';
 import { Route } from '../model/Route';
 import { DirectionDialog } from './directionDialog.component';
+import { PermissionDialog } from './permissionDialog.component';
 
 
-declare let OSMBuildings:any;
 
 export class Building {
   lat: number;
@@ -104,6 +102,9 @@ export class MapComponent implements OnInit {
   routeLength: any;
   routeTime: any;
 
+  //Location enabled
+  canPrompt = false;
+
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
   @ViewChild('itenary',{static: false}) iteDiv: ElementRef;
@@ -141,7 +142,9 @@ export class MapComponent implements OnInit {
   layercontrol: L.Control.Layers;
 
   constructor(
+    public searchStore : SearchStore,
     public directionDialog: MatDialog,
+    public permissionDialog: MatDialog,
     private snackBar: MatSnackBar,
     private searchService : SearchService,
     private dataservice: DataService,
@@ -163,6 +166,8 @@ export class MapComponent implements OnInit {
     });
     this.renderMap();
     this.reactiveForm();
+    this.checkPermission();
+    this.checkPermission()
   }
 
   // open bottomsheet poi details
@@ -231,7 +236,7 @@ export class MapComponent implements OnInit {
     this.streetName = value.street_pry
 
     //disable direction double form 
-    this.dirDouble = false
+    // this.dirDouble = false
 
     //set it up if directions pressed
     this.destinationPoint = {
@@ -271,61 +276,63 @@ export class MapComponent implements OnInit {
     }
   }
 
-  getDirection(){
-    if(this.showdirbox === false){
-      this.showsearchbox = false;
-      this.showdirbox = true;
-    }else{
-      this.showsearchbox = true;
-      this.showdirbox = false;
-    }
-  }
-  getPath(){
-    let topoint = this.dirform.get('topoint').value;
-    let frompoint= this.dirform.get('frompoint').value;
-    let acoord=[];
-    let bcoord = [];
+  // getDirection(){
+  //   if(this.showdirbox === false){
+  //     this.showsearchbox = false;
+  //     this.showdirbox = true;
+  //   }else{
+  //     this.showsearchbox = true;
+  //     this.showdirbox = false;
+  //   }
+  // }
+
+  // TODO delete if not used
+  // getPath(){
+  //   let topoint = this.dirform.get('topoint').value;
+  //   let frompoint= this.dirform.get('frompoint').value;
+  //   let acoord=[];
+  //   let bcoord = [];
     
     
-    this.searchService.searchAddress(frompoint).subscribe(response=>{
-        if(response.success === "true"){
-          acoord= response.data[0].geom.coordinates;
-          this.searchService.searchAddress(topoint).subscribe(response=>{
-              if(response.success === "true"){
-                bcoord= response.data[0].geom.coordinates;
-                let dataobj = {
-                  "pointa":acoord[0],
-                  "pointb":bcoord[0]
-                }
-                console.log(dataobj)
-                this.dataservice.getDirection(dataobj).subscribe((json:any)=>{
-                  if(this.geojson !== undefined){ this.map.removeLayer(this.geojsonpath) }
-                  this.geojsonpath = L.geoJSON(json.data).addTo(this.map);
-                  this.map.fitBounds(this.geojsonpath.getBounds());
+  //   this.searchService.searchAddress(frompoint).subscribe(response=>{
+  //       if(response.success === "true"){
+  //         acoord= response.data[0].geom.coordinates;
+  //         this.searchService.searchAddress(topoint).subscribe(response=>{
+  //             if(response.success === "true"){
+  //               bcoord= response.data[0].geom.coordinates;
+  //               let dataobj = {
+  //                 "pointa":acoord[0],
+  //                 "pointb":bcoord[0]
+  //               }
+  //               console.log(dataobj)
+  //               this.dataservice.getDirection(dataobj).subscribe((json:any)=>{
+  //                 if(this.geojson !== undefined){ this.map.removeLayer(this.geojsonpath) }
+  //                 this.geojsonpath = L.geoJSON(json.data).addTo(this.map);
+  //                 this.map.fitBounds(this.geojsonpath.getBounds());
 
-                  if(this.startMarker !== undefined){ this.map.removeLayer(this.startMarker) }
-                  this.startMarker = L.marker(acoord[0].reverse(),{icon:this.pinMarker}).addTo(this.map);
+  //                 if(this.startMarker !== undefined){ this.map.removeLayer(this.startMarker) }
+  //                 this.startMarker = L.marker(acoord[0].reverse(),{icon:this.pinMarker}).addTo(this.map);
 
-                  if(this.endMarker !== undefined){ this.map.removeLayer(this.endMarker) }
-                  this.endMarker = L.marker(bcoord[0].reverse(),{icon:this.myMarker}).addTo(this.map);
+  //                 if(this.endMarker !== undefined){ this.map.removeLayer(this.endMarker) }
+  //                 this.endMarker = L.marker(bcoord[0].reverse(),{icon:this.myMarker}).addTo(this.map);
 
-                });
-              }else if (response.success === "false"){
-                this.snackBar.open(response.message,"",{
-                  verticalPosition: 'top',
-                  duration: 3000
-                });
-              }
-          });
-        }else if (response.success === "false"){
-          this.snackBar.open(response.message,"",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-        }
-    });
+  //               });
+  //             }else if (response.success === "false"){
+  //               this.snackBar.open(response.message,"",{
+  //                 verticalPosition: 'top',
+  //                 duration: 3000
+  //               });
+  //             }
+  //         });
+  //       }else if (response.success === "false"){
+  //         this.snackBar.open(response.message,"",{
+  //           verticalPosition: 'top',
+  //           duration: 3000
+  //         });
+  //       }
+  //   });
 
-  }
+  // }
 
   //Drawer event
   onDrawerEvent(e: boolean){
@@ -368,54 +375,54 @@ export class MapComponent implements OnInit {
   }
 
   //Search origin
-  onOriginSearch(searchValue: string): void{
-    if(searchValue === ""){
-      this.originPoint= undefined
-    }else{
-      this.searchService.searchAddress(searchValue).subscribe(response=>{
-          if(response.success === "true"){
-            // var data = response.data.map(x => x.address)
-            this.OriginOptions = response.data;
-          }else if (response.success === "false"){
-          }
-      });
-    }
-  }
+  // onOriginSearch(searchValue: string): void{
+  //   if(searchValue === ""){
+  //     this.originPoint= undefined
+  //   }else{
+  //     this.searchService.searchAddress(searchValue).subscribe(response=>{
+  //         if(response.success === "true"){
+  //           // var data = response.data.map(x => x.address)
+  //           this.OriginOptions = response.data;
+  //         }else if (response.success === "false"){
+  //         }
+  //     });
+  //   }
+  // }
 
-  onOriginSelected(value){
-    //TODO set origin
-    console.log(value)
-    this.originPoint = {
-      lat: value.geom.coordinates[0][1],
-      lng: value.geom.coordinates[0][0],
-      name: value.address
-    }
-  }
+  // onOriginSelected(value){
+  //   //TODO set origin
+  //   console.log(value)
+  //   this.originPoint = {
+  //     lat: value.geom.coordinates[0][1],
+  //     lng: value.geom.coordinates[0][0],
+  //     name: value.address
+  //   }
+  // }
 
   //Search desitnation 
-  onDestinationSearch(searchValue: string): void{
-    if(searchValue === ""){
+  // onDestinationSearch(searchValue: string): void{
+  //   if(searchValue === ""){
 
-      this.destinationPoint = undefined 
-    }else{
-      this.searchService.searchAddress(searchValue).subscribe(response=>{
-          if(response.success === "true"){
-            // var data = response.data.map(x => x.address)
-            this.DestinationOptions = response.data;
-          }else if (response.success === "false"){
-          }
-      });
-    }
-  }
-  onDestinationSelected(value){
-    console.log(value)
-    //TODO set origin
-    this.destinationPoint= {
-      lat: value.geom.coordinates[0][1],
-      lng: value.geom.coordinates[0][0],
-      name: value.address
-    }
-  }
+  //     this.destinationPoint = undefined 
+  //   }else{
+  //     this.searchService.searchAddress(searchValue).subscribe(response=>{
+  //         if(response.success === "true"){
+  //           // var data = response.data.map(x => x.address)
+  //           this.DestinationOptions = response.data;
+  //         }else if (response.success === "false"){
+  //         }
+  //     });
+  //   }
+  // }
+  // onDestinationSelected(value){
+  //   console.log(value)
+  //   //TODO set origin
+  //   this.destinationPoint= {
+  //     lat: value.geom.coordinates[0][1],
+  //     lng: value.geom.coordinates[0][0],
+  //     name: value.address
+  //   }
+  // }
 
   //Get directions button
 
@@ -537,35 +544,16 @@ export class MapComponent implements OnInit {
       maxZoom: 20,
       minZoom: 13,
     });
-    // var drukmap= L.tileLayer.wms('https://{s}.drukmap.bt:8080/geoserver/bhutan/wms', {
-    //   layers: 'bhutan:thimphu',
-    //   maxZoom: 20,
-    //   minZoom: 13,
-    //   format: 'image/png',
-    //   transparent: true
-    // });
 
     this.initLeaflet();
     // this.initOSMB();
 
-    // var zoneJsonUrl = "https://raw.githubusercontent.com/kwangyel/drukmap/master/zones.geojson";
-    // fetch(zoneJsonUrl).then(resp=> resp.json())
-    // .then((data)=>{
-    //   const zones = L.geoJSON(data).addTo(this.map);
-    // })
-
-    // fetch(pois).then(resp=> resp.json())
-    // .then((data)=>{
-    //   const pois = L.geoJSON(data).addTo(this.map);
-    // })
-
-
-
-    //The routing object
-    // initialize the routng and navigation interface from here
-
-    //On route found this is triggered
-
+    var zoneJsonUrl = "https://raw.githubusercontent.com/kwangyel/drukmap/master/zones.geojson";
+    fetch(zoneJsonUrl).then(resp=> resp.json())
+      .then((data)=>{
+        const zones = L.geoJSON(data);
+        this.layercontrol.addOverlay(zones,"Zones")
+      })
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{
     //TODO: show and hide details of place on map click
@@ -585,9 +573,7 @@ export class MapComponent implements OnInit {
 
     var shopsUrl = "https://raw.githubusercontent.com/kwangyel/drukmap/master/Shop.geojson"
     var shop;
-    fetch(shopsUrl)
-      .then(res=>res.json())
-      .then((data)=>{
+    fetch(shopsUrl) .then(res=>res.json()) .then((data)=>{
         shop= L.geoJSON(data,{
           onEachFeature: (feature, layer) => {
               // layer.bindPopup('<h1>'+feature.properties.Unitname+'</h1><p>Contact Number: '+feature.properties.contact+'</p><button (click)="shopDirection>')
@@ -617,10 +603,8 @@ export class MapComponent implements OnInit {
 
     var pharmacies = "https://raw.githubusercontent.com/kwangyel/drukmap/master/pharmacy.geojson"
     var pharm;
-    fetch(pharmacies)
-      .then(res=>res.json())
-      .then((data)=>{
-        shop= L.geoJSON(data,{
+    fetch(pharmacies) .then(res=>res.json()) .then((data)=>{
+        pharm= L.geoJSON(data,{
           onEachFeature: (feature, layer) => {
               // layer.bindPopup('<h1>'+feature.properties.Unitname+'</h1><p>Contact Number: '+feature.properties.contact+'</p><button (click)="shopDirection>')
               layer.on('click',<LeafletEvent>(e)=>{
@@ -641,8 +625,7 @@ export class MapComponent implements OnInit {
             return L.marker(latLng,{icon: this.pharmMarker});
           }
         });
-        this.layercontrol.addOverlay(shop,"Pharmacies");
-
+        this.layercontrol.addOverlay(pharm,"Pharmacies");
       });
 
     
@@ -662,50 +645,23 @@ export class MapComponent implements OnInit {
       transparent: true
     }).addTo(this.map);
 
-
-
-    // let Search = L.Control.extend({
-    //   onAdd : function(map){
-    //     return L.DomUtil.get("customsearch")
-    //   },
-    // });
-
     // this.search = new Search({position: 'topleft'}).addTo(this.map);
     this.map.zoomControl.setPosition("topright");
 
     var baseMaps = {
       "Satellite Image": this.sat,
       "OSM base map": osm, 
-      // "Drukmap Base": drukmap
     };
-
-    // this.http.get(`http://localhost:4200/assets/geojson/conv_T239.geojson`).subscribe((json: any) => {
-    //   console.log(json);
-    //   this.geojson= L.geoJSON(json, {
-    //     style: (feature)=>{
-    //       return {
-    //         color:"red",
-    //         fillOpacity:0
-    //       }
-    //     }
-    //   }).addTo(this.map);
-    //   this.map.fitBounds(this.geojson.getBounds());
-    // });
 
     var overlayMaps = {
       "Buildings": bldgTile,
       "Streets": streeTile,
     }
 
-
-    let postbody = {
-      "a":[123,12],
-      "b":[1,1]
-    }
-  
-
     this.layercontrol = L.control.layers(baseMaps,overlayMaps).addTo(this.map);
 
+
+    //location call backs
     this.map.on('locationerror',(err)=>{
           if (err.code === 0) {
             this.snackBar.open('Couldnot pull your location, please try again later', '', {
@@ -714,6 +670,7 @@ export class MapComponent implements OnInit {
             });
           }
           if (err.code === 1) {
+
             this.snackBar.open('Location service is disabled, please enable it and try again', '', {
               verticalPosition: 'top',
               duration: 3000
@@ -733,19 +690,29 @@ export class MapComponent implements OnInit {
             }
     });
 
+    //location found 
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
-      if(this.myPosition !== undefined){
-        this.map.removeLayer(this.myPosition);
-      }
-      this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
+      if(radius<200){
+        if(this.myPosition !== undefined){
+          this.map.removeLayer(this.myPosition);
+        }
+        this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
 
-      if(this.myCircle!== undefined){
-        this.map.removeLayer(this.myCircle);
-      }
-      if(radius<100){
+        if(this.myCircle!== undefined){
+          this.map.removeLayer(this.myCircle);
+        }
         this.myCircle = L.circle(e.latlng,radius).addTo(this.map);
+
+        //set origin point to current location by default
+        this.searchStore.originPoint = 
+        {
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+          name: "Current Location"
+        }
+        console.log(this.searchStore.originPoint)
       }
     });
   }
@@ -765,11 +732,39 @@ export class MapComponent implements OnInit {
 
 
   }
-  startNavigation(){
 
+  startNavigation(){
       if(this.routePath !== null){
+        if(this.canPrompt !== true){
+          this.snackBar.open("Cannot navigate as location is not enabled.","",{
+            verticalPosition: 'top',
+            duration: 3000
+          });
+          return
+        }
         this.routeStore.storage = this.routePath;
         this.router.navigate(['/navigate']);
+      }else{
+        this.snackBar.open("Route is not set. Error","",{
+          verticalPosition: 'top',
+          duration: 3000
+        });
       }
   }
+
+  // Check permission using the web api
+  checkPermission(){
+    (navigator as any).permissions.query({name: 'geolocation'}).then((status)=>{
+      if(status.state == "denied"){
+        this.permissionDialog.open(PermissionDialog)
+      }else{
+        this.canPrompt = true;
+      }
+      status.onchange = ()=>{
+        if(status.state !== "denied"){
+          this.canPrompt= true;
+        }
+      }
+    })
+ }
 }

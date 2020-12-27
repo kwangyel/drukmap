@@ -30,6 +30,7 @@ import { SplashScreenComponent } from './splash-screen/splash-screen.component';
 import { NavigateComponent } from './navigate/navigate.component';
 import { BottomSheet } from './map/bottomSheet.component';
 import { DirectionDialog } from './map/directionDialog.component';
+import { PermissionDialog } from './map/permissionDialog.component';
 
 @NgModule({
   declarations: [
@@ -37,6 +38,7 @@ import { DirectionDialog } from './map/directionDialog.component';
     MapComponent,
     BottomSheet,
     DirectionDialog,
+    PermissionDialog,
     SplashScreenComponent,
     NavigateComponent,
   ],
@@ -71,6 +73,6 @@ import { DirectionDialog } from './map/directionDialog.component';
   ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  entryComponents:[BottomSheet,DirectionDialog]
+  entryComponents:[BottomSheet,DirectionDialog,PermissionDialog]
 })
 export class AppModule { }

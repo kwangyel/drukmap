@@ -35,7 +35,7 @@ export class NavigateComponent implements OnInit {
 
   //Mock location variavles
   locationGenerator: any;
-  ismocklocation=true;
+  ismocklocation=false;
   timer : any;
 
 
@@ -46,6 +46,11 @@ export class NavigateComponent implements OnInit {
 
   //Display booleans
   isNavigate = false;
+
+
+  //Location watcher handler id
+  locationId: any;
+  mapPosition: any;
 
   constructor(
     private routeStore : RouteStore,
@@ -63,6 +68,10 @@ export class NavigateComponent implements OnInit {
       // this.router.navigate(['/home']);
     }else{
       this.renderRoute();
+      if(this.locationId!== undefined){
+        this.map.setView(this.mapPosition.latlng,17);
+      }
+      this.locationId = this.map.locate({watch:true});
 
     }
     // this.loadVoices();
@@ -112,6 +121,16 @@ export class NavigateComponent implements OnInit {
     };
 
     L.control.layers(baseMaps).addTo(this.map);
+
+    //setUp location call back for navigation
+    this.map.on('locationfound',(e)=>{
+      var accuracy = e.accuracy
+      this.mapPosition = e
+
+      if(this.isNavigate == true){
+        this.updateRoute(e.latlng)
+      }
+    })
   }
 
   // Start navigating
@@ -121,8 +140,8 @@ export class NavigateComponent implements OnInit {
       this.startMockLocation()
     }else{
       // TODO get user locaiton here
+      this.isNavigate = true
     }
-    this.isNavigate = true
   }
 
   //Stop location/mock update. Resumable
