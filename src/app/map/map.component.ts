@@ -520,8 +520,9 @@ export class MapComponent implements OnInit {
     this.isLocationOn = true;
     if(this.locateId !== undefined){
       this.map.setView(this.latlng.latlng,17);
+    }else{
+      this.locateId = this.map.locate({watch:true});
     }
-    this.locateId = this.map.locate({watch:true});
   }
 
   zoomToLocation(){
