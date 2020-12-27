@@ -695,11 +695,13 @@ export class MapComponent implements OnInit {
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
-      if(radius<500){
+      if(radius<1000){
         if(this.myPosition !== undefined){
-          this.map.removeLayer(this.myPosition);
+          // this.map.removeLayer(this.myPosition);
+          this.myPosition.setLatLng(e.latlng)
+        }else{
+          this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
         }
-        this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
 
         if(this.myCircle!== undefined){
           this.map.removeLayer(this.myCircle);
