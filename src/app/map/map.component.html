@@ -53,9 +53,9 @@
             </div>
             <br>
             <!-- get dir button -->
-            <div>
+            <!-- <div>
               <button mat-raised-button color="primary" style= "width: 100%;" (click) = "getDirections()">Get Directions</button>
-            </div>
+            </div> -->
             <!-- end dir button  -->
           </div>
           <!-- End double form directions -->
@@ -132,7 +132,7 @@
         <mat-icon matSuffix  style="color: gray;">search</mat-icon>
       </button>
       <button class="directionIcon" >
-        <mat-icon matSuffix (click)="openDialog();" >directions</mat-icon>
+        <mat-icon matSuffix (click)="openDialog(null);" >directions</mat-icon>
       </button>
   </div>  
   <!-- end poi search -->
