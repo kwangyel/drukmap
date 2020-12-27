@@ -695,26 +695,25 @@ export class MapComponent implements OnInit {
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
-      if(radius<1000){
-        if(this.myPosition !== undefined){
-          // this.map.removeLayer(this.myPosition);
-          this.myPosition.setLatLng(e.latlng)
-        }else{
-          this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
-        }
-
+      if(this.myPosition !== undefined){
+        // this.map.removeLayer(this.myPosition);
+        this.myPosition.setLatLng(e.latlng)
+      }else{
+        this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
+      }
+      //set origin point to current location by default
+      this.searchStore.originPoint = 
+      {
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        name: "Current Location"
+      }
+      if(radius<500){
         if(this.myCircle!== undefined){
           this.map.removeLayer(this.myCircle);
         }
         this.myCircle = L.circle(e.latlng,radius).addTo(this.map);
 
-        //set origin point to current location by default
-        this.searchStore.originPoint = 
-        {
-          lat: e.latlng.lat,
-          lng: e.latlng.lng,
-          name: "Current Location"
-        }
         console.log(this.searchStore.originPoint)
       }
     });
