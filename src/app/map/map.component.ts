@@ -591,7 +591,7 @@ export class MapComponent implements OnInit {
         shop= L.geoJSON(data,{
           onEachFeature: (feature, layer) => {
               // layer.bindPopup('<h1>'+feature.properties.Unitname+'</h1><p>Contact Number: '+feature.properties.contact+'</p><button (click)="shopDirection>')
-              layer.on('click',(e)=>{
+              layer.on('click',<LeafletEvent>(e)=>{
                 this.destinationPoint = {
                   lat: e.latlng.lat,
                   lng: e.latlng.lng,
