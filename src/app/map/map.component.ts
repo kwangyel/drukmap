@@ -129,6 +129,17 @@ export class MapComponent implements OnInit {
     iconSize: [20,30]
   })
 
+  shopMarker = L.icon({
+    iconUrl: 'assets/shops.svg',
+    iconSize: [20,30]
+  })
+
+  pharmMarker = L.icon({
+    iconUrl: 'assets/pharm.svg',
+    iconSize: [30,40]
+  })
+  layercontrol: L.Control.Layers;
+
   constructor(
     public directionDialog: MatDialog,
     private snackBar: MatSnackBar,
@@ -248,7 +259,7 @@ export class MapComponent implements OnInit {
 
       let obj = 
       {
-        destPoint: { address: this.poiName, geom:{ coordinates:[[this.destinationPoint.lng,this.destinationPoint.lat]] } }
+        destPoint: { address: this.destinationPoint.name, geom:{ coordinates:[[this.destinationPoint.lng,this.destinationPoint.lat]] } }
       }
       // this.onDestinationSelected(obj)
       // this.destinationform.controls.destination.setValue(obj);
@@ -505,6 +516,7 @@ export class MapComponent implements OnInit {
     }
     this.locateId = this.map.locate({watch:true});
   }
+
   zoomToLocation(){
     alert("you double clicked");
   }
@@ -570,6 +582,70 @@ export class MapComponent implements OnInit {
     //   layers: [sat]
     // });
 
+
+    var shopsUrl = "https://raw.githubusercontent.com/kwangyel/drukmap/master/Shop.geojson"
+    var shop;
+    fetch(shopsUrl)
+      .then(res=>res.json())
+      .then((data)=>{
+        shop= L.geoJSON(data,{
+          onEachFeature: (feature, layer) => {
+              // layer.bindPopup('<h1>'+feature.properties.Unitname+'</h1><p>Contact Number: '+feature.properties.contact+'</p><button (click)="shopDirection>')
+              layer.on('click',(e)=>{
+                this.destinationPoint = {
+                  lat: e.latlng.lat,
+                  lng: e.latlng.lng,
+                  name: feature.properties.Unitname || "unknown"
+                }
+                let botObj = {
+                  poi: { poiName: feature.properties.Unitname || "unknown", street: ""},
+                  route:null
+                }
+                this.openBottomSheet(botObj)
+                console.log(this.destinationPoint)
+              });
+          },
+          pointToLayer: (feature, latLng) => {
+            return L.marker(latLng,{icon: this.shopMarker});
+          }
+        });
+        var assetOverlya = {
+          "Shop":shop
+        }
+        this.layercontrol.addOverlay(shop,"Shops");
+      });
+
+    var pharmacies = "https://raw.githubusercontent.com/kwangyel/drukmap/master/pharmacy.geojson"
+    var pharm;
+    fetch(pharmacies)
+      .then(res=>res.json())
+      .then((data)=>{
+        shop= L.geoJSON(data,{
+          onEachFeature: (feature, layer) => {
+              // layer.bindPopup('<h1>'+feature.properties.Unitname+'</h1><p>Contact Number: '+feature.properties.contact+'</p><button (click)="shopDirection>')
+              layer.on('click',(e)=>{
+                this.destinationPoint = {
+                  lat: e.latlng.lat,
+                  lng: e.latlng.lng,
+                  name: feature.properties.Unitname || "unknown"
+                }
+                let botObj = {
+                  poi: { poiName: feature.properties.Unitname || "unknown", street: ""},
+                  route:null
+                }
+                this.openBottomSheet(botObj)
+                console.log(this.destinationPoint)
+              });
+          },
+          pointToLayer: (feature, latLng) => {
+            return L.marker(latLng,{icon: this.pharmMarker});
+          }
+        });
+        this.layercontrol.addOverlay(shop,"Pharmacies");
+
+      });
+
+    
     var streeTile = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
       layers: 'cite:street_11august',
       maxZoom: 25,
@@ -628,7 +704,7 @@ export class MapComponent implements OnInit {
     }
   
 
-    L.control.layers(baseMaps,overlayMaps).addTo(this.map);
+    this.layercontrol = L.control.layers(baseMaps,overlayMaps).addTo(this.map);
 
     this.map.on('locationerror',(err)=>{
           if (err.code === 0) {
@@ -675,6 +751,20 @@ export class MapComponent implements OnInit {
   }
 
 
+  shopDirection(loc){
+    if(loc == undefined){
+      return
+    }
+    this.destinationPoint = {
+      lat: loc.lat,
+      lng: loc.lng,
+      name: loc.name
+    }
+    this.poiDirection()
+
+
+
+  }
   startNavigation(){
 
       if(this.routePath !== null){
