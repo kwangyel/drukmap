@@ -11,10 +11,30 @@ export class BottomSheet {
     streetName: string;
     onDirection = new EventEmitter();
 
-    constructor(private _bottomSheetRef: MatBottomSheetRef<BottomSheet>,@Inject(MAT_BOTTOM_SHEET_DATA) public data: {poiName: string,street: string}) { }
+    //start navigation
+    onStartNavigation = new EventEmitter();
+
+    // route details
+    routeLength: string;
+    routeTime: string;
+
+    constructor(private _bottomSheetRef: MatBottomSheetRef<BottomSheet>,
+      @Inject(MAT_BOTTOM_SHEET_DATA) public data:{
+        poi:{poiName: string,street: string},
+        route: {routeLength: string,routeTime: string},
+      }) 
+      { }
     ngOnInit() {
-        this.poiName = this.data.poiName;
-        this.streetName = this.data.street;
+      if(this.data.poi !== null){
+        this.poiName = this.data.poi.poiName;
+        this.streetName = this.data.poi.street;
+      }
+      if(this.data.route !== null){
+        this.routeLength = this.data.route.routeLength;
+        this.routeTime = this.data.route.routeTime;
+        this._bottomSheetRef.disableClose = true
+        
+      }
     }
     poiDirection(){
       this.onDirection.emit("direction");
@@ -22,6 +42,13 @@ export class BottomSheet {
     }
     poiShare(){
 
+    }
+    startNavigation(){
+      this.onStartNavigation.emit("navigaiton");
+      this._bottomSheetRef.dismiss();
+    }
+    closeSheet(){
+      this._bottomSheetRef.dismiss();
     }
 
 

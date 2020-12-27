@@ -28,12 +28,14 @@
 
 <!-- Destinatin form -->
     <div id="customsearch" class="dir-div">
-        <button class="drawer" >
+        <!-- <button class="drawer" >
         <mat-icon matSuffix > pin_drop</mat-icon>
-        </button>
+        </button> -->
         <form [formGroup]="destinationform" class="search-box">
         <mat-form-field class="search-input" appearance="none" >
+            <mat-icon matPrefix> pin_drop</mat-icon>
             <input  #destinput matInput placeholder="Set destination" formControlName="destination" (input) = "onDestinationSearch($event.target.value)" required [matAutocomplete]="auto">
+            <mat-icon matSuffix style="color: gray;">search</mat-icon>
             <mat-autocomplete #auto="matAutocomplete" [displayWith]="getOptionText">
                 <mat-option *ngFor="let option of DestinationOptions" (onSelectionChange)="onDestinationSelected($event.source.value)" [value]="option" >
                 {{option.address}}
@@ -41,9 +43,9 @@
             </mat-autocomplete>
         </mat-form-field>
         </form>
-        <button class="searchIcon">
+        <!-- <button class="searchIcon">
         <mat-icon matSuffix style="color: gray;">search</mat-icon>
-        </button>
+        </button> -->
     </div>
     <br>
     <!-- get dir button -->

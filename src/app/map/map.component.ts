@@ -159,19 +159,28 @@ export class MapComponent implements OnInit {
     const bottomsheetref = this.bottomsheet.open(BottomSheet,{
       data: details 
     });
-    const botSub = bottomsheetref.instance.onDirection.subscribe((val)=>{
+    const onDirSub = bottomsheetref.instance.onDirection.subscribe((val)=>{
       console.log(val)
       this.poiDirection();
     })
+    const onNavSub = bottomsheetref.instance.onStartNavigation.subscribe((val)=>{
+      console.log(val)
+      this.startNavigation()
+    })
     bottomsheetref.afterDismissed().subscribe(()=>{
-      botSub.unsubscribe();
+      onDirSub.unsubscribe();
+      onNavSub.unsubscribe();
     })
   }
 
   // open dialog for directions form
-  openDialog(){
-    this.directionDialog.open(DirectionDialog,{
+  openDialog(obj){
+    const dialogRef = this.directionDialog.open(DirectionDialog,{
+      data:obj ,
       width:"100vw"
+    });
+    const sub = dialogRef.componentInstance.onGetDirection.subscribe((val: {pointa: object,pointb: object})=>{
+      this.getDirections(val.pointa,val.pointb)
     })
   }
 
@@ -221,8 +230,8 @@ export class MapComponent implements OnInit {
     }
 
     let botObj = {
-      poiName: this.poiName,
-      street: this.streetName
+      poi: { poiName: this.poiName, street: this.streetName },
+      route:null
     }
 
     //Show details in drawer
@@ -237,17 +246,15 @@ export class MapComponent implements OnInit {
     if(this.destinationPoint !== undefined){
       this.dirDouble = true;
 
-      let obj = {
-        address: this.poiName,
-        geom:{
-          coordinates:[[this.destinationPoint.lng,this.destinationPoint.lat]]
-        }
+      let obj = 
+      {
+        destPoint: { address: this.poiName, geom:{ coordinates:[[this.destinationPoint.lng,this.destinationPoint.lat]] } }
       }
       // this.onDestinationSelected(obj)
-      this.destinationform.controls.destination.setValue(obj);
-      this.poiName = null
+      // this.destinationform.controls.destination.setValue(obj);
+      // this.poiName = null
       // this.openDrawer()
-      this.openDialog()
+      this.openDialog(obj)
     }else{
       console.log('no dest')
     }
@@ -401,12 +408,14 @@ export class MapComponent implements OnInit {
 
   //Get directions button
 
-  getDirections(){
+  getDirections(pointa,pointb){
     //Leaflet routing machine
-    if(this.originPoint !== undefined && this.destinationPoint !== undefined){
-      let pointa = L.latLng(this.originPoint.lat,this.originPoint.lng);
-      let pointb = L.latLng(this.destinationPoint.lat,this.destinationPoint.lng);
-
+    if(pointa !== undefined && pointb !== undefined){
+      // let pointa = L.latLng(this.originPoint.lat,this.originPoint.lng);
+      // let pointb = L.latLng(this.destinationPoint.lat,this.destinationPoint.lng);
+      let org = L.latLng(pointa.lat,pointa.lng);
+      let dest = L.latLng(pointb.lat,pointb.lng)
+      
       if(this.routing !== undefined){
         this.map.removeControl(this.routing)
       }
@@ -421,7 +430,7 @@ export class MapComponent implements OnInit {
         
         plan: L.Routing.plan(
           //set origin destination here
-          [ pointa,pointb ],
+          [ org,dest],
           {
             createMarker: function (i: number, waypoint: any, n: number) {
               var marker;
@@ -460,6 +469,12 @@ export class MapComponent implements OnInit {
         console.log(this.routePath)
         this.routeLength= Math.round(this.currentRoute.summary.totalDistance)
         this.routeTime = Math.round(this.currentRoute.summary.totalTime/60) + 6
+        
+        let routeDetails = {
+          poi: null,
+          route: {routeLength: this.routeLength, routeTime: this.routeTime}
+        }
+        this.openBottomSheet(routeDetails)
 
         // show navigate button
         this.enableNav = true;

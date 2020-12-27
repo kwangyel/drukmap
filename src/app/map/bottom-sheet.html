@@ -1,4 +1,7 @@
-<mat-card >
+<div style = "width: 100%; display: flex; flex-direction: row; justify-content: flex-end; ">
+  <mat-icon (click)="closeSheet()" style="vertical-align: right;">close</mat-icon>
+</div>
+<mat-card *ngIf = "poiName">
   <mat-card-header>
     <mat-card-title>{{poiName}}</mat-card-title>
     <mat-card-subtitle>Street: {{streetName}}</mat-card-subtitle>
@@ -9,3 +12,16 @@
           <mat-chip color = "primary" selected = "true" (click)="poiShare()">Share</mat-chip>
       </mat-chip-list>
 </mat-card>
+
+<div *ngIf = "routeLength">
+  <mat-card >
+    <mat-card-header>
+      <mat-card-title> Total Distance {{routeLength}} meters</mat-card-title>
+      <mat-card-subtitle>Estimated Time: {{routeTime}} mins without traffic</mat-card-subtitle>
+    </mat-card-header>
+  </mat-card>
+  <div >
+    <button mat-raised-button color="primary" style= "width: 100%;" (click) = "startNavigation()">Start Navigation</button>
+  </div>
+</div>
+<br>

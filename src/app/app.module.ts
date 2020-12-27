@@ -18,6 +18,7 @@ import {
   MatGridListModule,
   MatDialogModule,
   MatChipsModule,
+  MAT_BOTTOM_SHEET_DEFAULT_OPTIONS,
   MatSnackBarModule} from '@angular/material';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -65,7 +66,8 @@ import { DirectionDialog } from './map/directionDialog.component';
     MatListModule,
   ],
   providers: [
-    {provide: HTTP_INTERCEPTORS, useClass: HttpInterceptorService, multi: true}
+    {provide: HTTP_INTERCEPTORS, useClass: HttpInterceptorService, multi: true},
+    {provide: MAT_BOTTOM_SHEET_DEFAULT_OPTIONS, useValue: {hasBackdrop: false}}
   ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
