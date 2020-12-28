@@ -184,8 +184,17 @@ export class MapComponent implements OnInit {
   }
   processQueryParams(){
     this._activatedRoute.queryParams.subscribe((val)=>{
-      if(val!== null){
-        console.log(val)
+      if(val.hasOwnProperty("lat")){
+        console.log("shared")
+        let value = {
+          address: val.name,
+          geom:{
+            coordinates:[[val.lng,val.lat]]
+          }
+        }
+        this.gotoplace(value)
+      }else{
+        console.log("non shared")
       }
     })
   }
