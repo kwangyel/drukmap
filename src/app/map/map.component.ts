@@ -695,6 +695,8 @@ export class MapComponent implements OnInit {
         this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
       }
       //set origin point to current location by default
+      console.log("location found")
+      console.log(e)
       this.stateService.originPoint.next(
         {
           lat: e.latlng.lat,

@@ -68,6 +68,7 @@ export class DirectionDialog {
             lng: res.lng,
             name: res.name
           }
+          console.log(obj)
           this.originform.controls.origin.setValue(obj)
         })
     }

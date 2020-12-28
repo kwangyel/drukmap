@@ -52,6 +52,10 @@ export class NavigateComponent implements OnInit {
   locationId: any;
   mapPosition: any;
 
+
+  //Speech synthesis object
+  speaker: any;
+
   constructor(
     private routeStore : RouteStore,
     private router: Router
@@ -74,14 +78,22 @@ export class NavigateComponent implements OnInit {
       this.locationId = this.map.locate({watch:true});
 
     }
-    // this.loadVoices();
+    this.loadVoices();
   }
 
   //to change voice. Browsers load it async so need to set it on an event
   loadVoices(){
-    window.speechSynthesis.onvoiceschanged = ()=> {
-      this.voices = window.speechSynthesis.getVoices();
-    };
+    // window.speechSynthesis.onvoiceschanged = ()=> {
+    //   this.voices = window.speechSynthesis.getVoices();
+    // };
+    this.speaker = window.speechSynthesis
+    const vv = this.speaker.getVoices();
+    if(vv.length !== 0){
+      this.voices = vv 
+      console.log("found voices")
+    }else{
+      return setTimeout(()=>{ this.loadVoices()},100)
+    }
   }
 
   initLeaflet(){
@@ -135,6 +147,13 @@ export class NavigateComponent implements OnInit {
 
   // Start navigating
   startNavigation(){
+    //this is done to allow ios devices to play voice 
+    const fakeUtt = new SpeechSynthesisUtterance()
+    fakeUtt.voice = this.voices[0]
+    fakeUtt.volume = 0
+    fakeUtt.text = "is"
+
+    this.speaker.speak(fakeUtt)
     // TODO get current location and process
     if(this.ismocklocation){
       this.startMockLocation()
@@ -251,11 +270,14 @@ export class NavigateComponent implements OnInit {
                 }
               }
               this.showInstruction = instruction.text;
-              var msg = new SpeechSynthesisUtterance(inst);
+              var utterance = new SpeechSynthesisUtterance();
+              utterance.volume = 5
+              utterance.text = inst
+              utterance.voice = this.voices.filter(voice => voice.lang == 'en-UK')[0]
 
               // msg.voice = this.voices.filter(function(voice) { return voice.name == 'Google UK English Female'; })[0];
               // msg.voice = this.voices[10]
-              window.speechSynthesis.speak(msg)
+              // window.speechSynthesis.speak(msg)
               this.isInstructionGiven = true
             }
           }
