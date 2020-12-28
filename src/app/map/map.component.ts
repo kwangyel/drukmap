@@ -731,13 +731,6 @@ export class MapComponent implements OnInit {
 
   startNavigation(){
       if(this.routePath !== null){
-        if(this.canPrompt !== true){
-          this.snackBar.open("Cannot navigate as location is not enabled.","",{
-            verticalPosition: 'top',
-            duration: 3000
-          });
-          return
-        }
         this.routeStore.storage = this.routePath;
         this.router.navigate(['/navigate']);
       }else{
