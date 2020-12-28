@@ -7,10 +7,10 @@ import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
 import { SearchService } from '../service/search.service';
 import { RouteStore } from '../store/RouteStore';
 import { SearchStore } from '../store/SearchStore';
-import { MatBottomSheet, MatDialog} from '@angular/material/';
-import { BottomSheet } from "./bottomSheet.component"
+import { MatBottomSheet, MatDialog, MatBottomSheetRef} from '@angular/material/';
+import { BottomSheet} from "./bottomSheet.component"
 
-import {Router} from "@angular/router"
+import {ActivatedRoute, Router} from "@angular/router"
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
 import { Route } from '../model/Route';
@@ -106,6 +106,13 @@ export class MapComponent implements OnInit {
   //Location enabled
   canPrompt = false;
 
+  //Pin drop marker
+  dropMarker: L.Marker;
+
+
+  // child component referece
+  bottomsheetref: MatBottomSheetRef;
+
 
   @ViewChild('drawer',{static: false}) drawer: MatDrawer;
   @ViewChild('itenary',{static: false}) iteDiv: ElementRef;
@@ -128,7 +135,11 @@ export class MapComponent implements OnInit {
 
   pinMarker = L.icon({
     iconUrl: 'assets/marker-icon.png',
-    iconSize: [20,30]
+    iconSize: [30,40]
+  })
+  pinRed = L.icon({
+    iconUrl: 'assets/location_red.svg',
+    iconSize: [30,40]
   })
 
   shopMarker = L.icon({
@@ -154,11 +165,10 @@ export class MapComponent implements OnInit {
     private routeStore: RouteStore,
     private bottomsheet: MatBottomSheet,
     private stateService : StateService,
+    private _activatedRoute: ActivatedRoute,
   ) {
     this.building = new Building();
   }
-
-
 
 
   ngOnInit() {
@@ -170,22 +180,30 @@ export class MapComponent implements OnInit {
     this.reactiveForm();
     this.checkPermission();
     this.checkPermission()
+    this.processQueryParams()
+  }
+  processQueryParams(){
+    this._activatedRoute.queryParams.subscribe((val)=>{
+      if(val!== null){
+        console.log(val)
+      }
+    })
   }
 
   // open bottomsheet poi details
   openBottomSheet(details:any): void {
-    const bottomsheetref = this.bottomsheet.open(BottomSheet,{
+    this.bottomsheetref = this.bottomsheet.open(BottomSheet,{
       data: details 
     });
-    const onDirSub = bottomsheetref.instance.onDirection.subscribe((val)=>{
+    const onDirSub = this.bottomsheetref.instance.onDirection.subscribe((val)=>{
       console.log(val)
       this.poiDirection();
     })
-    const onNavSub = bottomsheetref.instance.onStartNavigation.subscribe((val)=>{
+    const onNavSub = this.bottomsheetref.instance.onStartNavigation.subscribe((val)=>{
       console.log(val)
       this.startNavigation()
     })
-    bottomsheetref.afterDismissed().subscribe(()=>{
+    this.bottomsheetref.afterDismissed().subscribe(()=>{
       onDirSub.unsubscribe();
       onNavSub.unsubscribe();
     })
@@ -251,7 +269,7 @@ export class MapComponent implements OnInit {
     }
 
     let botObj = {
-      poi: { poiName: this.poiName, street: this.streetName },
+      poi: { poiName: this.poiName, street: this.streetName , lat: pos.lat, lng: pos.lng},
       route:null
     }
 
@@ -280,64 +298,6 @@ export class MapComponent implements OnInit {
       console.log('no dest')
     }
   }
-
-  // getDirection(){
-  //   if(this.showdirbox === false){
-  //     this.showsearchbox = false;
-  //     this.showdirbox = true;
-  //   }else{
-  //     this.showsearchbox = true;
-  //     this.showdirbox = false;
-  //   }
-  // }
-
-  // TODO delete if not used
-  // getPath(){
-  //   let topoint = this.dirform.get('topoint').value;
-  //   let frompoint= this.dirform.get('frompoint').value;
-  //   let acoord=[];
-  //   let bcoord = [];
-    
-    
-  //   this.searchService.searchAddress(frompoint).subscribe(response=>{
-  //       if(response.success === "true"){
-  //         acoord= response.data[0].geom.coordinates;
-  //         this.searchService.searchAddress(topoint).subscribe(response=>{
-  //             if(response.success === "true"){
-  //               bcoord= response.data[0].geom.coordinates;
-  //               let dataobj = {
-  //                 "pointa":acoord[0],
-  //                 "pointb":bcoord[0]
-  //               }
-  //               console.log(dataobj)
-  //               this.dataservice.getDirection(dataobj).subscribe((json:any)=>{
-  //                 if(this.geojson !== undefined){ this.map.removeLayer(this.geojsonpath) }
-  //                 this.geojsonpath = L.geoJSON(json.data).addTo(this.map);
-  //                 this.map.fitBounds(this.geojsonpath.getBounds());
-
-  //                 if(this.startMarker !== undefined){ this.map.removeLayer(this.startMarker) }
-  //                 this.startMarker = L.marker(acoord[0].reverse(),{icon:this.pinMarker}).addTo(this.map);
-
-  //                 if(this.endMarker !== undefined){ this.map.removeLayer(this.endMarker) }
-  //                 this.endMarker = L.marker(bcoord[0].reverse(),{icon:this.myMarker}).addTo(this.map);
-
-  //               });
-  //             }else if (response.success === "false"){
-  //               this.snackBar.open(response.message,"",{
-  //                 verticalPosition: 'top',
-  //                 duration: 3000
-  //               });
-  //             }
-  //         });
-  //       }else if (response.success === "false"){
-  //         this.snackBar.open(response.message,"",{
-  //           verticalPosition: 'top',
-  //           duration: 3000
-  //         });
-  //       }
-  //   });
-
-  // }
 
   //Drawer event
   onDrawerEvent(e: boolean){
@@ -562,6 +522,25 @@ export class MapComponent implements OnInit {
       })
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{
+      if(this.dropMarker !== undefined){
+        this.map.removeLayer(this.dropMarker)
+        this.dropMarker = undefined
+        this.bottomsheetref.dismiss();
+      }else{
+        this.dropMarker = L.marker(e.latlng,{icon: this.pinRed}).addTo(this.map)
+        let botObj = {
+          poi: { poiName: "Dropped Pin", street: " "+ e.latlng.toString(), lat: e.latlng.lat, lng: e.latlng.lng},
+          route:null
+        }
+        this.destinationPoint= {
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+          name: "Dropped pin"
+        }
+        this.openBottomSheet(botObj);
+      }
+
+
     //TODO: show and hide details of place on map click
       // console.log(e.latlng)
 
@@ -590,7 +569,7 @@ export class MapComponent implements OnInit {
                   name: feature.properties.Unitname || "unknown"
                 }
                 let botObj = {
-                  poi: { poiName: feature.properties.Unitname || "unknown", street: ""},
+                  poi: { poiName: feature.properties.Unitname || "unknown", street: "", lat: e.latlng.lat, lng:e.latlng.lng},
                   route:null
                 }
                 this.openBottomSheet(botObj)
@@ -620,7 +599,7 @@ export class MapComponent implements OnInit {
                   name: feature.properties.Unitname || "unknown"
                 }
                 let botObj = {
-                  poi: { poiName: feature.properties.Unitname || "unknown", street: ""},
+                  poi: { poiName: feature.properties.Unitname || "unknown", street: "", lat: e.latlng.lat, lng: e.latlng.lng},
                   route:null
                 }
                 this.openBottomSheet(botObj)
