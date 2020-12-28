@@ -16,6 +16,7 @@ import 'lrm-graphhopper';
 import { Route } from '../model/Route';
 import { DirectionDialog } from './directionDialog.component';
 import { PermissionDialog } from './permissionDialog.component';
+import { StateService } from '../store/StateService';
 
 
 
@@ -152,6 +153,7 @@ export class MapComponent implements OnInit {
     private router: Router,
     private routeStore: RouteStore,
     private bottomsheet: MatBottomSheet,
+    private stateService : StateService,
   ) {
     this.building = new Building();
   }
@@ -197,6 +199,9 @@ export class MapComponent implements OnInit {
     });
     const sub = dialogRef.componentInstance.onGetDirection.subscribe((val: {pointa: object,pointb: object})=>{
       this.getDirections(val.pointa,val.pointb)
+    })
+    const gpsFixed = dialogRef.componentInstance.onOriginLocation.subscribe((val)=>{
+      this.getMyLocation();
     })
   }
 
@@ -702,12 +707,13 @@ export class MapComponent implements OnInit {
         this.myPosition = L.marker(e.latlng,{icon: this.myMarker}).addTo(this.map);
       }
       //set origin point to current location by default
-      this.searchStore.originPoint = 
-      {
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
-        name: "Current Location"
-      }
+      this.stateService.originPoint.next(
+        {
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+          name: "Current Location"
+        }
+      );
       if(radius<500){
         if(this.myCircle!== undefined){
           this.map.removeLayer(this.myCircle);

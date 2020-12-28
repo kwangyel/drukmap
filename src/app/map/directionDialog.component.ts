@@ -2,8 +2,8 @@ import { Component, Inject } from '@angular/core';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material/dialog';
 import { EventEmitter } from '@angular/core';
 import { FormGroup, FormControl, FormBuilder, Form } from '@angular/forms';
-import { SearchService } from '../service/search.service';
-import { SearchStore } from '../store/SearchStore';
+import { StateService } from '../store/StateService'
+import { SearchService } from '../service/search.service'
 
 interface searchPoint{
   lat: number;
@@ -15,7 +15,6 @@ interface searchPoint{
   selector: 'direction-dialog',
   templateUrl: './direction-dialog.html',
   styleUrls: ['./map.component.scss'],
-  providers: [SearchStore]
 })
 export class DirectionDialog {
     poiName:string;
@@ -38,8 +37,8 @@ export class DirectionDialog {
     constructor(private dialogRef: MatDialogRef<DirectionDialog>,
         @Inject(MAT_DIALOG_DATA) public data: {destPoint: any},
         private fb : FormBuilder,
-        private searchStore: SearchStore,
-        private searchService : SearchService,
+        private stateService : StateService,
+        private searchService: SearchService,
         ) { }
     ngOnInit() {
         this.originform = this.fb.group({
@@ -62,12 +61,15 @@ export class DirectionDialog {
 
           }
         }
-        if(this.searchStore.originPoint !== null){
-          console.log(this.searchStore.originPoint)
-          let obj={ address: this.searchStore.originPoint.name, geom:{ coordinates:[[this.searchStore.originPoint.lng,this.searchStore.originPoint.lat]] } }
+        this.stateService.originPoint.subscribe((res:any)=>{
+          let obj={ address: res.name, geom:{ coordinates:[[res.lng,res.lat]] } }
+          this.originPoint = {
+            lat:res.lat,
+            lng: res.lng,
+            name: res.name
+          }
           this.originform.controls.origin.setValue(obj)
-
-        }
+        })
     }
 
 
