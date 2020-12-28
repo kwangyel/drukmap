@@ -53,7 +53,7 @@ export class BottomSheet {
         for(let key in option){
           params.set(key, option[key])
         }
-        let shareURl = "http://localhost:4200/home?"+params.toString();
+        let shareURl = "https://www.drukmap.bt/home?"+params.toString();
         console.log(shareURl)
         let shareObject ={
           title: "Share this location",
