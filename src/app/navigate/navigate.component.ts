@@ -4,6 +4,7 @@ import { Route } from '../model/Route';
 import { RouteStore } from '../store/RouteStore';
 import * as turf from "@turf/turf";
 import {Router} from "@angular/router"
+import { SearchService } from "../service/search.service"
 
 @Component({
   selector: 'app-navigate',
@@ -56,10 +57,23 @@ export class NavigateComponent implements OnInit {
   //Speech synthesis object
   speaker: any;
 
+  //Distance stakc for off route detectiong
+  distanceStack: DistanceStack;
+
+  //Destination point
+  destinationPoint: L.LatLng;
+
+
+  // route geometry
+  routePline: any;
+
   constructor(
     private routeStore : RouteStore,
-    private router: Router
-  ) { }
+    private router: Router,
+    private searchService: SearchService 
+  ) {
+    this.distanceStack = new DistanceStack()
+   }
 
   ngOnInit() {
     this.sat = L.tileLayer('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
@@ -76,6 +90,8 @@ export class NavigateComponent implements OnInit {
         this.map.setView(this.mapPosition.latlng,17);
       }
       this.locationId = this.map.locate({watch:true});
+      this.destinationPoint = this.routePath.route.inputWaypoints[1]
+      console.log("this is the destination point "+ this.destinationPoint)
 
     }
     this.loadVoices();
@@ -107,13 +123,13 @@ export class NavigateComponent implements OnInit {
 
   renderRoute(){
     let routeGeom = this.routePath.route.coordinates.map(x => [x.lat,x.lng]);
-    let routePline = L.polyline(routeGeom,{
+    this.routePline = L.polyline(routeGeom,{
       color:'blue',
       weight:4,
       opacity:0.8,
       smoothFactor:1
     }).addTo(this.map);
-    this.map.fitBounds(routePline.getBounds());
+    this.map.fitBounds(this.routePline.getBounds());
     
     //Initial distance of route
     this.showDistance = Math.round(this.routePath.route.summary.totalDistance);
@@ -139,8 +155,15 @@ export class NavigateComponent implements OnInit {
       var accuracy = e.accuracy
       this.mapPosition = e
 
+      if(this.isNavigate === true){
+        this.updateRoute(e.latlng)
+      }
+    })
+
+    this.map.on('click',<LeafletMouseEvent>(e)=>{
       if(this.isNavigate == true){
         this.updateRoute(e.latlng)
+
       }
     })
   }
@@ -223,7 +246,7 @@ export class NavigateComponent implements OnInit {
     //test to check current bearing
     // console.log("bearing"+this.routePath.getCurrentBearing());
     console.log(location)
-    this.map.setView([location.geometry.coordinates[1],location.geometry.coordinates[0]],18);
+    this.map.setView([location.geometry.coordinates[1],location.geometry.coordinates[0]],20);
 
   }
 
@@ -238,6 +261,43 @@ export class NavigateComponent implements OnInit {
         //TODO maybe this cann be moved outside to the checkvalidLocation function. Review
         let snapped = turf.nearestPointOnLine(ls,currentLocation,{units:'meters'});
         console.log("snapped dist now: "+snapped.properties.dist)
+
+        if(this.routePath.legDistanceRemaining < 1){
+          if(this.chekcOffRoute(location)){
+            //Your off route here
+            console.log("You are off route. Redirecting")
+            let pointa = L.latLng(location.lat,location.lng)
+            let pointb = L.latLng(this.destinationPoint.lat,this.destinationPoint.lng)
+            if(this.destinationPoint !== null){
+              const routing = L.Routing.control({
+                router: new L.Routing.GraphHopper(undefined , {
+                  serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
+                }),
+                waypoints:[pointa,pointb],
+              }).addTo(this.map);
+              routing.on('routesfound',(e)=>{
+                var route = e.route[0]
+                this.routePath = new Route(route)
+                if(this.routePline !== undefined){
+                  this.map.removeLayer(this.routePline)
+                  console.log("removing pling")
+                }
+                let routeGeom = this.routePath.route.coordinates.map(x => [x.lat,x.lng]);
+                this.routePline = L.polyline(routeGeom,{
+                  color:'blue',
+                  weight:4,
+                  opacity:0.8,
+                  smoothFactor:1
+                }).addTo(this.map);
+
+                console.log("new route assigned")
+              })
+            }else{
+              console.log("destination point is null")
+            }
+
+          }
+        }
 
         if(snapped.properties.dist < 30){
           this.calcualteLegDistanceRemaining(snapped.geometry.coordinates,snapped.properties.index)
@@ -341,16 +401,22 @@ export class NavigateComponent implements OnInit {
       }
       var turnAngle = this.angleBetween(currentBearing,nextBearing)
 
-      // var userAngleFromTurn = this.angleBetween(location.getBearing(),turnAngle)
+      var userAngleFromTurn = null
+      if(location.heading !== null){
+        userAngleFromTurn = this.angleBetween(location.heading,turnAngle)
+      }else{
+        console.log("cant get user heading")
+      }
 
       //if the user bearing is less than the offset allowed then chance are it might be complete but wait for distance remaining to go to zero before increasing index
       if(turnAngle <= 30){
         console.log("waiting for leg distance to end now")
+        console.log(turnAngle + " current " + currentBearing + "next " + nextBearing)
         return this.routePath.legDistanceRemaining == 0;
       }else{
         //TODO this comes when the device gets the users bearing
-        // return userAngleFromTurn <= 30
-        return false;
+        return userAngleFromTurn <= 30
+        // return false;
       }
     }
   }
@@ -359,5 +425,75 @@ export class NavigateComponent implements OnInit {
   angleBetween(anglea,angleb){
     var a = Math.abs(anglea - angleb) % 360
     return a > 180 ? 360 - a : a
+  }
+
+
+  //Off route detectiong
+  chekcOffRoute(location){
+    // location should be a raw location
+
+    var nextInstructionPosition = this.routePath.getNextStartPosition()
+    var userPosition = turf.point([location.lng,location.lat])
+
+    if(nextInstructionPosition !== null){
+      var endofLegPoint = turf.point([nextInstructionPosition.lng,nextInstructionPosition.lat])
+      var distanceFromManeuver = turf.distance(endofLegPoint,userPosition,{units: 'meters'}) 
+
+      // get stack latest point
+      var top = this.distanceStack.peek()
+      if(top == null){
+        this.distanceStack.push(distanceFromManeuver)
+      }
+      if(top < distanceFromManeuver){
+        this.distanceStack.push(distanceFromManeuver)
+      }
+      if(top > distanceFromManeuver){
+        this.distanceStack.clear()
+      }
+      if(this.distanceStack.length() >= 3){
+        return true
+      }
+    }
+    return false
+  }
+}
+
+
+//Stack implementation for off route check
+class DistanceStack{
+  data;
+  top: number;
+  constructor(){
+    this.data = []
+    this.top = 0
+  }
+
+  push(element){
+    this.data[this.top] = element
+    this.top = this.top + 1
+  }
+
+  pop (){
+    if(this.isEmpty() == false){
+      this.top = this.top - 1
+      return this.data.pop()
+    }
+  }
+
+  peek(){
+    return this.data[this.top - 1]
+  }
+
+  length(){
+    return this.top
+  }
+
+  isEmpty(){
+    return this.top == 0
+  }
+
+  clear(){
+    this.top = 0
+    this.data = []
   }
 }

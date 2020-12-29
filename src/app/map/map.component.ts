@@ -414,7 +414,10 @@ export class MapComponent implements OnInit {
       //Graphhopper api with LRM
       this.routing = L.Routing.control({
         router: new L.Routing.GraphHopper(undefined , {
-          serviceUrl: 'https://zhichar.myddns.rocks/gh/route'
+          serviceUrl: 'https://zhichar.myddns.rocks/gh/route',
+          urlParameters:{
+            vehicle: 'car'
+          }
         }),
         showAlternatives: true,
         // routeWhileDragging: true,
@@ -493,7 +496,21 @@ export class MapComponent implements OnInit {
   getMyLocation(){
     this.isLocationOn = true;
     if(this.locateId !== undefined){
-      this.map.setView(this.latlng.latlng,17);
+      if(this.latlng !== undefined){
+        this.map.setView(this.latlng.latlng,17);
+      }else{
+        this.latlng = (navigator as any).geolocation.getCurrentPosition((e)=>{
+          console.log(e)
+          this.latlng = {
+            latlng: L.latLng(e.coords.latitude,e.coords.longtitude)
+          }
+          this.stateService.originPoint.next({
+            lat: e.coords.latitude,
+            lng: e.coords.longtitude,
+            name: "current location"
+          })
+        })
+      }
     }else{
       this.locateId = this.map.locate({watch:true});
     }
@@ -554,7 +571,7 @@ export class MapComponent implements OnInit {
       // console.log(e.latlng)
 
       // TODO testing purpose remove later or when you figure out how to mock route locations
-      // this.updateRoute(e.latlng)
+      // // this.updateRoute(e.latlng)
     })
 
     // this.map = L.map('map',{
@@ -688,6 +705,10 @@ export class MapComponent implements OnInit {
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
+      this.snackBar.open("Heading" + e.heading,"",{
+        verticalPosition: 'top',
+        duration: 3000
+      });
       if(this.myPosition !== undefined){
         // this.map.removeLayer(this.myPosition);
         this.myPosition.setLatLng(e.latlng)
