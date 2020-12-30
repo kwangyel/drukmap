@@ -654,6 +654,30 @@ export class MapComponent implements OnInit {
       minZoom: 13,
       format: 'image/png',
       transparent: true
+    });
+
+    var wms_shops = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+      layers: 'cite:shops',
+      maxZoom: 25,
+      minZoom: 13,
+      format: 'image/png',
+      transparent: true
+    }).addTo(this.map);
+
+    var wms_atms = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+      layers: 'cite:atms',
+      maxZoom: 25,
+      minZoom: 13,
+      format: 'image/png',
+      transparent: true
+    }).addTo(this.map);
+
+    var wms_food = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+      layers: 'cite:resturants',
+      maxZoom: 25,
+      minZoom: 13,
+      format: 'image/png',
+      transparent: true
     }).addTo(this.map);
 
     // this.search = new Search({position: 'topleft'}).addTo(this.map);
@@ -665,8 +689,11 @@ export class MapComponent implements OnInit {
     };
 
     var overlayMaps = {
-      "Buildings": bldgTile,
+      "Building Address": bldgTile,
       "Streets": streeTile,
+      "Shops":wms_shops,
+      "Atms": wms_atms,
+      "Resturants": wms_food
     }
 
     this.layercontrol = L.control.layers(baseMaps,overlayMaps).addTo(this.map);

@@ -254,6 +254,7 @@ export class NavigateComponent implements OnInit {
       if(this.routePath !== undefined){
         let coordinates = this.routePath.route.coordinates.map(x => [x.lng,x.lat]);
         let ls = turf.lineString(coordinates);
+        // this.routePath. 
 
         let currentLocation = turf.point([location.lng,location.lat]);
 
