@@ -13,7 +13,8 @@ import { BottomSheet} from "./bottomSheet.component"
 import {ActivatedRoute, Router} from "@angular/router"
 import 'leaflet-routing-machine';
 import 'lrm-graphhopper';
-import { Route } from '../model/Route';
+// import { Route } from '../model/Route';
+import { RouteProgress } from '../model/RouteProgress'
 import { DirectionDialog } from './directionDialog.component';
 import { PermissionDialog } from './permissionDialog.component';
 import { StateService } from '../store/StateService';
@@ -70,7 +71,7 @@ export class MapComponent implements OnInit {
   startMarker: L.Marker;
   endMarker: L.Marker;
   sat: any;
-  routePath: Route;
+  routePath: RouteProgress;
   voices: any;
 
   // search suggestions
@@ -108,6 +109,9 @@ export class MapComponent implements OnInit {
 
   //Pin drop marker
   dropMarker: L.Marker;
+
+  // Route polyline
+  routePline: any;
 
 
   // child component referece
@@ -407,63 +411,19 @@ export class MapComponent implements OnInit {
       // let pointb = L.latLng(this.destinationPoint.lat,this.destinationPoint.lng);
       let org = L.latLng(pointa.lat,pointa.lng);
       let dest = L.latLng(pointb.lat,pointb.lng)
-      
-      if(this.routing !== undefined){
-        this.map.removeControl(this.routing)
-      }
-      //Graphhopper api with LRM
-      this.routing = L.Routing.control({
-        router: new L.Routing.GraphHopper(undefined , {
-          serviceUrl: 'https://zhichar.myddns.rocks/gh/route',
-          urlParameters:{
-            vehicle: 'car'
-          }
-        }),
-        showAlternatives: true,
-        // routeWhileDragging: true,
-        addWaypoints: false,
-        
-        plan: L.Routing.plan(
-          //set origin destination here
-          [ org,dest],
-          {
-            createMarker: function (i: number, waypoint: any, n: number) {
-              var marker;
-              console.log(i)
-              if(i == 0){
-                marker = L.marker(waypoint.latLng, {
-                  icon: L.icon({
-                    iconUrl: 'assets/marker-red.png',
-                    iconSize: [15, 15]
-                  })
-                });
-              }else{
-                marker = L.marker(waypoint.latLng,{
-                  icon: L.icon({
-                    iconUrl: 'assets/location.svg',
-                    iconSize: [20,20]
-                  })
-                }) 
-              }
-              return marker;
-            }
-          },
-        ),
-        fitSelectedRoutes: true
+      this.searchService.searchroute(pointa,pointb).subscribe(resp=>{
+        console.log(resp)
+        this.routePath = new RouteProgress(resp.paths[0])
+        let routeGeom = this.routePath.path.points.coordinates.map(x => [x[1],x[0]])
+        this.routePline = L.polyline(routeGeom,{
+          color: 'blue',
+          weight:6,
+          opacity: 0.8,
+          smoothFactor: 1
+        }).addTo(this.map);
 
-      }).addTo(this.map);
-      this.routing.hide();
-
-      this.routing.on('routesfound',(e)=>{
-        //TODO this.currentRoute may be redundant remove after review
-        this.currentRoute = e.routes[0];
-        console.log(this.currentRoute);
-        
-        //assigning to new route path class
-        this.routePath = new Route(this.currentRoute);
-        console.log(this.routePath)
-        this.routeLength= Math.round(this.currentRoute.summary.totalDistance)
-        this.routeTime = Math.round(this.currentRoute.summary.totalTime/60) + 6
+        this.routeLength= Math.round(this.routePath.path.distance)
+        this.routeTime = Math.round(this.routeLength/500) 
         
         let routeDetails = {
           poi: null,
@@ -473,9 +433,76 @@ export class MapComponent implements OnInit {
 
         // show navigate button
         this.enableNav = true;
+      });
+      
+      // if(this.routing !== undefined){
+      //   this.map.removeControl(this.routing)
+      // }
+      // //Graphhopper api with LRM
+      // this.routing = L.Routing.control({
+      //   router: new L.Routing.GraphHopper(undefined , {
+      //     serviceUrl: 'https://zhichar.myddns.rocks/gh/route',
+      //     urlParameters:{
+      //       vehicle: 'car'
+      //     }
+      //   }),
+      //   showAlternatives: true,
+      //   // routeWhileDragging: true,
+      //   addWaypoints: false,
+        
+      //   plan: L.Routing.plan(
+      //     //set origin destination here
+      //     [ org,dest],
+      //     {
+      //       createMarker: function (i: number, waypoint: any, n: number) {
+      //         var marker;
+      //         console.log(i)
+      //         if(i == 0){
+      //           marker = L.marker(waypoint.latLng, {
+      //             icon: L.icon({
+      //               iconUrl: 'assets/marker-red.png',
+      //               iconSize: [15, 15]
+      //             })
+      //           });
+      //         }else{
+      //           marker = L.marker(waypoint.latLng,{
+      //             icon: L.icon({
+      //               iconUrl: 'assets/location.svg',
+      //               iconSize: [20,20]
+      //             })
+      //           }) 
+      //         }
+      //         return marker;
+      //       }
+      //     },
+      //   ),
+      //   fitSelectedRoutes: true
 
-        // this.updateRoute(position)
-      })
+      // }).addTo(this.map);
+      // this.routing.hide();
+
+      // this.routing.on('routesfound',(e)=>{
+      //   //TODO this.currentRoute may be redundant remove after review
+      //   this.currentRoute = e.routes[0];
+      //   console.log(this.currentRoute);
+        
+      //   //assigning to new route path class
+      //   // this.routePath = new Route(this.currentRoute);
+      //   console.log(this.routePath)
+      //   this.routeLength= Math.round(this.currentRoute.summary.totalDistance)
+      //   this.routeTime = Math.round(this.currentRoute.summary.totalTime/60) + 6
+        
+      //   let routeDetails = {
+      //     poi: null,
+      //     route: {routeLength: this.routeLength, routeTime: this.routeTime}
+      //   }
+      //   this.openBottomSheet(routeDetails)
+
+      //   // show navigate button
+      //   this.enableNav = true;
+
+      //   // this.updateRoute(position)
+      // })
     }else{
       if(this.routing !== undefined){
         this.map.removeControl(this.routing)
@@ -732,10 +759,6 @@ export class MapComponent implements OnInit {
     this.map.on('locationfound',(e)=>{
       var radius = e.accuracy;
       this.latlng = e
-      this.snackBar.open("Heading" + e.heading,"",{
-        verticalPosition: 'top',
-        duration: 3000
-      });
       if(this.myPosition !== undefined){
         // this.map.removeLayer(this.myPosition);
         this.myPosition.setLatLng(e.latlng)
@@ -774,9 +797,6 @@ export class MapComponent implements OnInit {
       name: loc.name
     }
     this.poiDirection()
-
-
-
   }
 
   startNavigation(){
