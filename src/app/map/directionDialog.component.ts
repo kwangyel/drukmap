@@ -62,6 +62,7 @@ export class DirectionDialog {
           }
         }
         this.onOriginLocation.emit();
+        // this.stateService.
         this.stateService.originPoint.subscribe((res:any)=>{
           let obj={ address: res.name, geom:{ coordinates:[[res.lng,res.lat]] } }
           this.originPoint = {

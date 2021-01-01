@@ -18,6 +18,7 @@ import { RouteProgress } from '../model/RouteProgress'
 import { DirectionDialog } from './directionDialog.component';
 import { PermissionDialog } from './permissionDialog.component';
 import { StateService } from '../store/StateService';
+import { GeohashService } from '../service/geohashservice';
 
 
 
@@ -170,6 +171,7 @@ export class MapComponent implements OnInit {
     private bottomsheet: MatBottomSheet,
     private stateService : StateService,
     private _activatedRoute: ActivatedRoute,
+    private geohashService: GeohashService,
   ) {
     this.building = new Building();
   }
@@ -575,6 +577,8 @@ export class MapComponent implements OnInit {
       })
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{
+      //TODO geohas service here
+      console.log(this.geohashService.encode(e.latlng.lat,e.latlng.lng,9))
       if(this.dropMarker !== undefined){
         this.map.removeLayer(this.dropMarker)
         this.dropMarker = undefined
@@ -742,6 +746,10 @@ export class MapComponent implements OnInit {
             });
           }
           if (err.code === 2) {
+            if(this.locateId !== undefined){
+              this.map.stopLocate()
+            }
+            this.locateId = this.map.locate({watch:true})
             this.snackBar.open('Your location couldnot be determined', '', {
               verticalPosition: 'top',
               duration: 3000

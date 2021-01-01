@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import {Location} from '@angular/common';
 import { RouteStore } from './store/RouteStore';
 import { SearchStore } from './store/SearchStore';
+import { GeohashService } from './service/geohashservice';
 
 export class MatMenuListItem {
   menuLinkText: string;
@@ -15,7 +16,7 @@ export class MatMenuListItem {
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  providers: [RouteStore,SearchStore]
+  providers: [RouteStore,SearchStore,GeohashService]
 })
 export class AppComponent implements OnInit {
 

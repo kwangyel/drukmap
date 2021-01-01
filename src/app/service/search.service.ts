@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { throwError } from 'rxjs';
 import { API_DEV } from '../app.constants';
+import { API_LOCAL } from '../app.constants'
 import { catchError } from 'rxjs/operators';
 
 
@@ -52,5 +53,10 @@ export class SearchService {
       .pipe(
         catchError(this.handleError)
       );
+  }
+
+  searchHas(hash: string){
+    return this.http
+      .get<any>(`${API_DEV}/searchhash`)
   }
 }

@@ -5,3 +5,4 @@
 
 export const API_URL = 'https://zhichar.myddns.rocks/mpi/map';
 export const API_DEV= 'https://zhichar.myddns.rocks/mpi/map';
+export const API_LOCAL = "http://localhost:8090/map";

@@ -422,7 +422,7 @@ export class NavigateComponent implements OnInit {
 
 
     //check if user is stepping away from the current step
-    if(accuracy < 300){
+    if(accuracy < 210){
       var snap_pt = turf.nearestPointOnLine(currentLegGeom,userPosition,{units:'meters'})
       if(snap_pt.properties.dist > 50){
         console.log("setting reroute since snapped dist is more")
