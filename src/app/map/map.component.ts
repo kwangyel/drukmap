@@ -671,7 +671,7 @@ export class MapComponent implements OnInit {
       });
 
     
-    var streeTile = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+    var streeTile = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:street_11august',
       maxZoom: 25,
       minZoom: 13,
@@ -679,7 +679,7 @@ export class MapComponent implements OnInit {
       transparent: true
     }).addTo(this.map);
 
-    var bldgTile = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+    var bldgTile = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:building_numbers_11august',
       maxZoom: 25,
       minZoom: 13,
@@ -687,7 +687,7 @@ export class MapComponent implements OnInit {
       transparent: true
     });
 
-    var wms_shops = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+    var wms_shops = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:shops',
       maxZoom: 25,
       minZoom: 13,
@@ -695,7 +695,7 @@ export class MapComponent implements OnInit {
       transparent: true
     }).addTo(this.map);
 
-    var wms_atms = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+    var wms_atms = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:atms',
       maxZoom: 25,
       minZoom: 13,
@@ -703,7 +703,7 @@ export class MapComponent implements OnInit {
       transparent: true
     }).addTo(this.map);
 
-    var wms_food = L.tileLayer.wms('https://zhichar.myddns.rocks/geoserver/cite/wms', {
+    var wms_food = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:resturants',
       maxZoom: 25,
       minZoom: 13,
