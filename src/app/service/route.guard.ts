@@ -18,12 +18,17 @@ export class RouteGuard implements CanActivate {
   canActivate(
     next: ActivatedRouteSnapshot,
     state: RouterStateSnapshot): boolean {
+      const user = this.authService.userValue;
       if (this.authService.isUserLoggedIn()) {
+        if(next.data.roles && next.data.roles.indexOf(user.role) === -1){
+          this.router.navigate(['/home']);
+          return false;
+        }
+
         if (this.isPageRefresh()) {
           this.router.navigateByUrl( this.getUrlWithoutSecondary(state) );
           return false;
         }
-
         return true;
       }
 

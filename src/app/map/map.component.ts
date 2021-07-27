@@ -20,6 +20,9 @@ import { PermissionDialog } from './permissionDialog.component';
 import { StateService } from '../store/StateService';
 import { GeohashService } from '../service/geohashservice';
 
+import { AuthenticationService } from '../service/authentication.service';
+import { Role } from '../model/Role';
+
 
 
 export class Building {
@@ -115,6 +118,9 @@ export class MapComponent implements OnInit {
   routePline: any;
 
 
+  //Overlays
+  overlayMaps: any;
+
   // child component referece
   bottomsheetref: MatBottomSheetRef;
 
@@ -156,6 +162,12 @@ export class MapComponent implements OnInit {
     iconUrl: 'assets/pharm.svg',
     iconSize: [30,40]
   })
+
+  facilityMarker = L.icon({
+    iconUrl: 'assets/hf.svg',
+    iconSize: [30,40]
+  })
+
   layercontrol: L.Control.Layers;
 
   constructor(
@@ -172,21 +184,42 @@ export class MapComponent implements OnInit {
     private stateService : StateService,
     private _activatedRoute: ActivatedRoute,
     private geohashService: GeohashService,
+    private authService: AuthenticationService
   ) {
     this.building = new Building();
+    
   }
 
 
   ngOnInit() {
     this.sat = L.tileLayer('https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}', {
       maxZoom: 20,
-      minZoom: 13,
+      minZoom: 7,
     });
     this.renderMap();
     this.reactiveForm();
+    this.processQueryParams()
+    this.checkRole();
     this.checkPermission();
     this.checkPermission()
-    this.processQueryParams()
+  }
+  checkRole(){
+    let userValue = this.authService.userValue;
+    if(userValue.role === Role.Admin){
+      console.log("Adding admin layers");
+      this.addAdminOverlays();
+    }else{
+      console.log("not admin");
+    }
+
+    // this.authService.user.subscribe(data=>{
+    //   if(data.role === Role.Admin){
+    //     console.log("Adding admin layers");
+    //     this.addAdminOverlays();
+    //   }else{
+    //     console.log("not admin");
+    //   }
+    // })
   }
   processQueryParams(){
     this._activatedRoute.queryParams.subscribe((val)=>{
@@ -521,6 +554,71 @@ export class MapComponent implements OnInit {
     // this.showPoiSearch = this.drawer.opened
   }
 
+  addAdminOverlays(){
+    //Cluster overlay
+    var cluster = "https://raw.githubusercontent.com/kwangyel/drukmap_fileRepo/main/clusters.geojson";
+    var clusterOverlay;
+    fetch(cluster) .then(res=>res.json()) .then((data)=>{
+        clusterOverlay = L.geoJSON(data,{
+          style: (feature) => {
+            return {
+              color: "yellow",
+              fillOpacity: 0
+            }
+          },
+          onEachFeature: (feature, layer) => {
+              layer.bindPopup('<p>Cluster Name: '+feature.properties.dzongkhag+'</p><p>Cluster Number: '+feature.properties.cluster+'</p>'),
+              layer.on("mouseover",()=>{
+                layer.openPopup()
+              }),
+              layer.on("mouseout",()=>{
+                layer.closePopup()
+              })
+              // layer.on('click',<LeafletEvent>(e)=>{
+              //   this.destinationPoint = {
+              //     lat: e.latlng.lat,
+              //     lng: e.latlng.lng,
+              //     name: feature.properties.Unitname || "unknown"
+              //   }
+              //   let botObj = {
+              //     poi: { poiName: feature.properties.Unitname || "unknown", street: "", lat: e.latlng.lat, lng: e.latlng.lng},
+              //     route:null
+              //   }
+              //   this.openBottomSheet(botObj)
+              //   console.log(this.destinationPoint)
+              // });
+          }
+        });
+        this.layercontrol.addOverlay(clusterOverlay,"Clusters");
+        this.map.addLayer(clusterOverlay);
+        this.map.fitBounds(clusterOverlay.getBounds())
+    });
+
+
+    //Facilities overlay
+    var facilities = "https://raw.githubusercontent.com/kwangyel/drukmap_fileRepo/main/facilities.geojson"
+    var facOverlay;
+    fetch(facilities) .then(res=>res.json()) .then((data)=>{
+        facOverlay = L.geoJSON(data,{
+          onEachFeature: (feature, layer) => {
+              layer.bindPopup('<p>Facility Name: '+feature.properties.h_center+'</p><p>Population: '+feature.properties.Population+'</p>'),
+              layer.on("mouseover",()=>{
+                layer.openPopup()
+              }),
+              layer.on("mouseout",()=>{
+                layer.closePopup()
+              })
+          },
+          pointToLayer: (feature, latLng) => {
+            return L.marker(latLng,{icon: this.facilityMarker});
+          }
+        });
+        this.layercontrol.addOverlay(facOverlay,"Health Facilities");
+        this.map.addLayer(facOverlay);
+    });
+
+  }
+
   //Zooms to the current location based on data from the device. TODO: need to fix this.
   getMyLocation(){
     this.isLocationOn = true;
@@ -563,7 +661,7 @@ export class MapComponent implements OnInit {
   renderMap() {
     var osm = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
       maxZoom: 20,
-      minZoom: 13,
+      minZoom: 7,
     });
 
     this.initLeaflet();
@@ -578,24 +676,24 @@ export class MapComponent implements OnInit {
 
     this.map.on('click',<LeafletMouseEvent>(e)=>{
       //TODO geohas service here
-      console.log(this.geohashService.encode(e.latlng.lat,e.latlng.lng,9))
-      if(this.dropMarker !== undefined){
-        this.map.removeLayer(this.dropMarker)
-        this.dropMarker = undefined
-        this.bottomsheetref.dismiss();
-      }else{
-        this.dropMarker = L.marker(e.latlng,{icon: this.pinRed}).addTo(this.map)
-        let botObj = {
-          poi: { poiName: "Dropped Pin", street: " "+ e.latlng.toString(), lat: e.latlng.lat, lng: e.latlng.lng},
-          route:null
-        }
-        this.destinationPoint= {
-          lat: e.latlng.lat,
-          lng: e.latlng.lng,
-          name: "Dropped pin"
-        }
-        this.openBottomSheet(botObj);
-      }
+      // console.log(this.geohashService.encode(e.latlng.lat,e.latlng.lng,9))
+      // if(this.dropMarker !== undefined){
+      //   this.map.removeLayer(this.dropMarker)
+      //   this.dropMarker = undefined
+      //   this.bottomsheetref.dismiss();
+      // }else{
+      //   this.dropMarker = L.marker(e.latlng,{icon: this.pinRed}).addTo(this.map)
+      //   let botObj = {
+      //     poi: { poiName: "Dropped Pin", street: " "+ e.latlng.toString(), lat: e.latlng.lat, lng: e.latlng.lng},
+      //     route:null
+      //   }
+      //   this.destinationPoint= {
+      //     lat: e.latlng.lat,
+      //     lng: e.latlng.lng,
+      //     name: "Dropped pin"
+      //   }
+      //   this.openBottomSheet(botObj);
+      // }
 
 
     //TODO: show and hide details of place on map click
@@ -674,7 +772,7 @@ export class MapComponent implements OnInit {
     var streeTile = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:street_11august',
       maxZoom: 25,
-      minZoom: 13,
+      minZoom: 7,
       format: 'image/png',
       transparent: true
     }).addTo(this.map);
@@ -693,7 +791,8 @@ export class MapComponent implements OnInit {
       minZoom: 13,
       format: 'image/png',
       transparent: true
-    }).addTo(this.map);
+    // }).addTo(this.map);
+    });
 
     var wms_atms = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:atms',
@@ -701,7 +800,7 @@ export class MapComponent implements OnInit {
       minZoom: 13,
       format: 'image/png',
       transparent: true
-    }).addTo(this.map);
+    });
 
     var wms_food = L.tileLayer.wms('https://zhichar-pling.ddnsfree.com/geoserver/cite/wms', {
       layers: 'cite:resturants',
@@ -709,7 +808,7 @@ export class MapComponent implements OnInit {
       minZoom: 13,
       format: 'image/png',
       transparent: true
-    }).addTo(this.map);
+    });
 
     // this.search = new Search({position: 'topleft'}).addTo(this.map);
     this.map.zoomControl.setPosition("topright");
@@ -719,7 +818,7 @@ export class MapComponent implements OnInit {
       "OSM base map": osm, 
     };
 
-    var overlayMaps = {
+    this.overlayMaps = {
       "Building Address": bldgTile,
       "Streets": streeTile,
       "Shops":wms_shops,
@@ -727,7 +826,7 @@ export class MapComponent implements OnInit {
       "Resturants": wms_food
     }
 
-    this.layercontrol = L.control.layers(baseMaps,overlayMaps).addTo(this.map);
+    this.layercontrol = L.control.layers(baseMaps,this.overlayMaps).addTo(this.map);
 
 
     //location call backs
@@ -792,6 +891,7 @@ export class MapComponent implements OnInit {
         console.log(this.searchStore.originPoint)
       }
     });
+
   }
 
 

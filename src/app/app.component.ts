@@ -5,6 +5,7 @@ import {Location} from '@angular/common';
 import { RouteStore } from './store/RouteStore';
 import { SearchStore } from './store/SearchStore';
 import { GeohashService } from './service/geohashservice';
+import { Role } from './model/Role';
 
 export class MatMenuListItem {
   menuLinkText: string;
@@ -43,13 +44,16 @@ export class AppComponent implements OnInit {
     private authService: AuthenticationService,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
-    private location: Location
+    private location: Location,
   ) {}
 
   ngOnInit() {
     this.authService.authState.subscribe(value => {
       this.isUserLoggedIn = value;
     });
+  }
+  public get isAdmin(){
+    return this.authService.hasRole(Role.Admin);
   }
 
   redirect(menuItem: MatMenuListItem) {

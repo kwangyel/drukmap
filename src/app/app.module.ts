@@ -31,6 +31,9 @@ import { NavigateComponent } from './navigate/navigate.component';
 import { BottomSheet } from './map/bottomSheet.component';
 import { DirectionDialog } from './map/directionDialog.component';
 import { PermissionDialog } from './map/permissionDialog.component';
+import { LoginComponent } from './login/login.component';
+import { AdminComponent } from './admin/admin.component';
+import { UserRoleDirective } from './user-role.directive';
 
 @NgModule({
   declarations: [
@@ -41,6 +44,9 @@ import { PermissionDialog } from './map/permissionDialog.component';
     PermissionDialog,
     SplashScreenComponent,
     NavigateComponent,
+    LoginComponent,
+    AdminComponent,
+    UserRoleDirective,
   ],
   imports: [
     BrowserModule,

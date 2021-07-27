@@ -1,0 +1,10 @@
+.app-logo {
+    background: url("./../../assets/drukmap.svg");
+    background-repeat: no-repeat;
+    max-width: 100%;
+    background-position: center;
+    background-size: contain;
+    // width: 400px;
+    height: 400px;
+    animation: blurFadeInOut 3s ease-in backwards;
+}
